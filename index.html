@@ -1,0 +1,111 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title></title>
+    <style>canvas { width: 100%; height: 100% }</style>
+    <script src="js/three.min.js"></script>
+    <script src="js/OBJLoader.js"></script>
+    <script src="js/jquery-3.1.1.min.js"></script>
+</head>
+<body>
+    <script>
+        var modelPath = 'model/obj_test1_converted.obj'
+        var targetRotation = 0;
+        var targetRotationOnMouseDown = 0;
+        var mouseX = 0;
+        var mouseXOnMouseDown = 0;
+        var windowHalfX = window.innerWidth / 2;
+        var windowHalfY = window.innerHeight / 2;
+        document.addEventListener( 'mousedown', onDocumentMouseDown, false );
+
+        function onDocumentMouseDown( event ) {
+            event.preventDefault();
+            document.addEventListener( 'mousemove', onDocumentMouseMove, false );
+            document.addEventListener( 'mouseup', onDocumentMouseUp, false );
+            mouseXOnMouseDown = event.clientX - windowHalfX;
+            targetRotationOnMouseDown = targetRotation;
+        }
+
+        function onDocumentMouseMove( event ) {
+            mouseX = event.clientX - windowHalfX;
+            targetRotation = targetRotationOnMouseDown + ( mouseX - mouseXOnMouseDown ) * 0.02;
+        }
+
+        function onDocumentMouseUp( event ) {
+            document.removeEventListener( 'mousemove', onDocumentMouseMove, false );
+            document.removeEventListener( 'mouseup', onDocumentMouseUp, false );
+        }
+
+        var scene = new THREE.Scene();
+        scene.background = new THREE.Color(0xffffff);
+
+        var camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        
+        var renderer = new THREE.WebGLRenderer();
+        
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        var geometry = new THREE.CubeGeometry(1,1,1);
+        var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
+        var cube = new THREE.Mesh(geometry, material);
+
+
+        $.get(modelPath, function(data) {    
+            var lines = data.split("\n");
+
+            $.each(lines, function(n, elem) {
+                //console.log(n + elem);
+         });
+        });
+
+        var loader = new THREE.OBJLoader();
+
+        var obj;
+        var mesh;
+                   var forceFace =  new THREE.MeshBasicMaterial( { 
+                color: 0x156289, 
+                // shading: THREE.FlatShading,
+                // opacity: 0.05,
+                opacity: 0.1,
+                transparent: true,
+                side: THREE.DoubleSide,
+
+                // blending: THREE.AdditiveBlending,
+
+                depthWrite: false
+            } )
+
+        loader.load(modelPath, function ( object ) {
+          //scene.add( object );
+          obj = object;
+          
+          object.traverse( function ( child ) {
+            console.log(child);
+
+            if ( child instanceof THREE.Mesh ) {
+                //console.log(child.geometry.attributes.position);
+                mesh = new THREE.Mesh(child.geometry, forceFace);
+                scene.add(mesh);
+            }
+
+        } );
+          render();
+          //console.log(object.geometry);
+      } );
+
+        document.body.appendChild(renderer.domElement);
+
+        //scene.add(cube);
+        camera.position.y = 15;
+        camera.position.z = 50;
+        function render() {
+            requestAnimationFrame(render);
+            cube.rotation.x += 0.1;
+            cube.rotation.y += 0.1;
+            mesh.rotation.y += ( targetRotation - mesh.rotation.y ) * 0.05;
+            //obj.rotation.y += 0.5;
+            renderer.render(scene, camera);
+        }
+    </script>
+</body>
+</html>
