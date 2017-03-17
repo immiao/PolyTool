@@ -56,19 +56,21 @@
         var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
         var cube = new THREE.Mesh(geometry, material);
 
-
-        $.get(modelPath, function(data) {    
-            var lines = data.split("\n");
-
-            $.each(lines, function(n, elem) {
-                //console.log(n + elem);
-            });
-        });
-
         var loader = new THREE.OBJLoader();
 
         var obj;
         var mesh;
+
+        // .obj model info
+        var vertices = [];
+        var half_faces = [];
+
+        // half-face definition
+        function half_face() {
+            this.indices = [];
+            this.adjacent = [];
+        }
+
         var forceFace =  new THREE.MeshBasicMaterial( { 
             color: 0x156289, 
                 // shading: THREE.FlatShading,
@@ -96,6 +98,8 @@
             }
 
         } );
+          // read model from .obj files and then construct half-faces in the callback function
+          read_obj_model(vertices, half_faces);
           render();
           //console.log(object.geometry);
       } );
@@ -115,7 +119,70 @@
             //parent.postMessage('hi', '*');
         }
         //console.log(parent);
-        
+
+        // helper function
+        // function isValidNormal(index_a, index_b) {
+
+        // }
+
+        // function isAdjacent(extended_index_a, extended_index_b, index_a, index_b) {
+        //     var length = extended_index_a.length;
+        //     for (var i = 1; i < length - 1; i++) {
+        //         for (var j = 1; j < length - 1; j++) {
+        //             // find possible connected half-faces
+        //             if (extended_index_a[i] == extended_index_b[j] && (extended_index_a[i + 1] == extended_index_b[j - 1] || extended_index_a[i - 1] == extended_index_b[j + 1])) {
+        //                 // judge if the normal is valid
+        //                 if (isValidNormal(index_a, index_b))
+        //                     return true;
+        //             }
+        //         }
+        //     }
+        //     return false;
+        // }
+
+        function read_obj_model(vertices, faces) {
+            $.get(modelPath, function(data) {    
+                var lines = data.split("\n");
+
+                $.each(lines, function(n, line) {
+                    tokens = line.split(" ");
+                    if (tokens[0] == 'v') {
+                        vertices.push(tokens.slice(1, 4).map(function(item) {
+                            return parseFloat(item);
+                        }));                    
+                    }
+                    else if (tokens[0] == 'f') {
+                        var face = new half_face();
+                        for (var i = 1; i < tokens.length; i++) {
+                            var indices = tokens[i].split("/");
+                            // minus 1 makes it start from 0
+                            face.indices.push(parseInt(indices[0]) - 1);
+                            //console.log(face);
+                        }
+                        half_faces.push(face);
+                        var symFace = new half_face();
+                        symFace.indices = face.indices.slice(0).reverse();
+                        half_faces.push(symFace);
+                    }
+                });
+                connect_half_faces(vertices, half_faces);
+                console.log(vertices);
+            });
+        }
+
+        function connect_half_faces(vertices, half_faces) {
+            // for (var i = 0; i < half_faces.length; i++) {
+            //     var extended_index_a = half_faces[i].indices.concat(half_faces[i].indices.slice(0, 2));
+            //     for (var j = i + 1; j < half_faces.length; j++) {
+            //         var extended_index_b = half_faces[j].indices.concat(half_faces[j].indices.slice(0, 2));
+            //         if (isAdjacent(extended_index_a, extended_index_b, half_faces[i].indices, half_faces[j].indices)) {
+            //             half_faces[i].adjacent.push(half_faces[j]);
+            //             half_faces[j].adjacent.push(half_faces[i]);
+            //         }
+            //     }
+            // }
+        }
+
     </script>
 </body>
 </html>
