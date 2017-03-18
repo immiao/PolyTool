@@ -63,9 +63,8 @@
 
         // .obj model info
         var vertices = [];
-        var faces = [];
         var edges = [];
-        //var half_faces = [];
+        var half_faces = [];
 
         // half-face definition
         function half_face() {
@@ -74,9 +73,9 @@
         }
 
         // face defintion
-        function face(hfa, hfb) {
-            this.hfa = hfa;
-            this.hfb = hfb;
+        function face() {
+            this.hfa = undefined;
+            this.hfb = undefined;
         }
 
         // edge definition
@@ -114,7 +113,7 @@
 
         } );
           // read model from .obj files and then construct half-faces in the callback function
-          read_obj_model(vertices, faces, edges);
+          read_obj_model(vertices, half_faces, edges);
           render();
           //console.log(object.geometry);
       } );
@@ -136,39 +135,57 @@
         //console.log(parent);
 
         // helper function
+        function swap(a, b) {
+            var temp = a;
+            a = b;
+            b = temp;
+        }
 
-        function addFaceToEdge(face, edges) {
-            var f = face.hfa;
-            var length = f.indices.length;
+        function addFaceToEdge(f, edges) {
+            var length = f.hfa.indices.length;
+            
+            var ttt = [];
             for (var i = 0; i < length; i++) {
-                var a = f.indices[i];
-                var b = f.indices[(i + 1) % length];
+                var newFace = new face();
+                var a = f.hfa.indices[i];
+                var b = f.hfa.indices[(i + 1) % length];
+                //console.log(f);
                 if (a > b) {
                     a = a ^ b;
                     b = a ^ b;
                     a = a ^ b;
+                    newFace.hfa = f.hfb;
+                    newFace.hfb = f.hfa;
                 }
+                else {
+                    newFace.hfa = f.hfa;
+                    newFace.hfb = f.hfb;
+                }
+
                 var edge_length = edges.length;
                 var isFound = false;
                 for (var j = 0; j < edge_length; j++) {
                     if (a == edges[j].va && b == edges[j].vb) {
-                        edges[j].faces.push(face);
+                        edges[j].faces.push(newFace);
                         isFound = true;
                         break;
                     }
                 }
+
                 if (!isFound) {
                     var e = new edge();
                     e.va = a;
                     e.vb = b;
-                    e.faces.push(face);
+                    e.faces.push(newFace);
                     edges.push(e);
                 }
+                //return;
             }
+            //console.log(ttt);
             //console.log(edges);
         }
 
-        function getCenter(indices) {
+        function get_center(indices) {
             var center = new THREE.Vector3();
             var length = indices.length;
             for (var i = 0; i < length; i++) {
@@ -179,10 +196,12 @@
             return center;
         }
 
-        function getPerpendicularVector(v_a, v_b, center) {
+        function get_perpendicular_vector(v_a, v_b, face_indices) {
+            //console.log(v_a);
+            var center = get_center(face_indices);
             var e_vector = v_b.sub(v_a);
             var v = center.sub(v_a);
-            return v - e_vector.multiplyScalar(v.dot(e_vector) / e_vector.lengthSq());
+            return v.sub(e_vector.multiplyScalar(v.dot(e_vector) / e_vector.lengthSq()));
         }
 
         // function isValidNormal(index_a, index_b, v_index_a, v_index_b) {
@@ -210,10 +229,9 @@
         //     return false;
         // }
 
-        function read_obj_model(vertices, faces, edges) {
+        function read_obj_model(vertices, half_faces, edges) {
             $.get(modelPath, function(data) {    
                 var lines = data.split("\n");
-
                 $.each(lines, function(n, line) {
                     tokens = line.split(" ");
                     if (tokens[0] == 'v') {
@@ -223,6 +241,7 @@
                         vertices.push(new THREE.Vector3(t[0], t[1], t[2]));                    
                     }
                     else if (tokens[0] == 'f') {
+                        aaa = false;
                         var hf = new half_face();
                         for (var i = 1; i < tokens.length; i++) {
                             var indices = tokens[i].split("/");
@@ -230,38 +249,101 @@
                             hf.indices.push(parseInt(indices[0]) - 1);
                             //console.log(face);
                         }
-                        //half_faces.push(face);
+                        half_faces.push(hf);
                         var symhf = new half_face();
                         symhf.indices = hf.indices.slice(0).reverse();
-                        //half_faces.push(symFace);
-                        var f = new face(hf, symhf);
-                        faces.push(f);
+                        half_faces.push(symhf);
+                        var f = new face();
+                        f.hfa = hf;
+                        f.hfb = symhf;
                         addFaceToEdge(f, edges);
                         //console.log(edges);
                     }
                 });
-                //connect_half_faces(vertices, half_faces);
+                // var test = [];
+                // test.push(half_faces[0]);
+                // console.log(test);
+                // half_faces[0].indices[0] = 100;
+                // console.log(test);
+                // half_faces[0] = half_faces[1];
+                // console.log(half_faces[0]);
+                // console.log(test);
+                connect_half_faces(vertices, edges);
                 //console.log(vertices);
                 //var test = getCenter(half_faces[0].indices);
                 //console.log(test);
                 //console.log(vertices[0][0]);
                 //console.log(faces);
-                console.log(edges);
+                //console.log(edges);
             });
         }
 
-        function connect_half_faces(vertices, half_faces) {
-            for (var i = 0; i < half_faces.length; i++) {
-                var extended_index_a = half_faces[i].indices.concat(half_faces[i].indices.slice(0, 2));
-                for (var j = i + 1; j < half_faces.length; j++) {
-                    var extended_index_b = half_faces[j].indices.concat(half_faces[j].indices.slice(0, 2));
-                    if (isAdjacent(extended_index_a, extended_index_b, half_faces[i].indices, half_faces[j].indices)) {
-                        half_faces[i].adjacent.push(half_faces[j]);
-                        half_faces[j].adjacent.push(half_faces[i]);
+        function get_angle(vertices, edge, index, ref_axis) {
+            var vector_a = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[0].hfa.indices);
+            var vector_b = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[index].hfa.indices);
+            var axis = new THREE.Vector3();
+            axis.crossVectors(vector_a, vector_b);
+            var angle = vector_a.angleTo(vector_b);
+            if (axis.dot(ref_axis) < 0) {
+                angle += Math.PI;
+            }
+            return angle;
+        }
+
+        function connect_around(vertices, edge) {
+            // Use simple selection sort
+            // total_face won't be very large. Selection sort won't be much slower than quick sort, even faster.
+            var total_face = edge.faces.length;
+            var vector_a = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[0].hfa.indices);
+            var vector_b = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[1].hfa.indices);
+            var ref_axis = new THREE.Vector3();
+            ref_axis.crossVectors(vector_a, vector_b);
+
+            for (var i = 1; i < total_face; i++) {
+                var min_angle = get_angle(vertices, edge, i, ref_axis);
+                var min_index = i;
+                for (var j = i + 1; j < total_face; j++) {
+                    var angle = get_angle(vertices, edge, j, ref_axis);
+                    if (angle < min_angle) {
+                        angle = min_angle;
+                        min_index = j;
                     }
                 }
+                if (min_index != i) {
+                    var temp = edge.faces[i];
+                    edge.faces[i] = edge.faces[min_index];
+                    edge.faces[min_index] = temp;
+                }
+            }
+
+            // connect
+            for (var i = 0; i < total_face; i++) {
+                var f0 = edge.faces[i];
+                var f1 = edge.faces[(i + 1) % total_face];
+                f0.hfb.adjacent.push(f1.hfa);
+                f1.hfa.adjacent.push(f0.hfb);
+            }
+            //console.log(edge);
+        }
+
+        function connect_half_faces(vertices, edges) {
+            var length = edges.length;
+            for (var i = 0; i < length; i++) {
+                connect_around(vertices, edges[i]);
             }
         }
+        // function connect_half_faces(vertices, half_faces) {
+        //     for (var i = 0; i < half_faces.length; i++) {
+        //         var extended_index_a = half_faces[i].indices.concat(half_faces[i].indices.slice(0, 2));
+        //         for (var j = i + 1; j < half_faces.length; j++) {
+        //             var extended_index_b = half_faces[j].indices.concat(half_faces[j].indices.slice(0, 2));
+        //             if (isAdjacent(extended_index_a, extended_index_b, half_faces[i].indices, half_faces[j].indices)) {
+        //                 half_faces[i].adjacent.push(half_faces[j]);
+        //                 half_faces[j].adjacent.push(half_faces[i]);
+        //             }
+        //         }
+        //     }
+        // }
 
     </script>
 </body>
