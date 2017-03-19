@@ -43,6 +43,7 @@
             for (var i = 0; i < cells.length; i++) {
                 (function(){
                     var div = document.createElement("div");
+                    var cell_idx = i;
                     div.className = "link";
                     div.textContent = cells[i];
                     div.addEventListener("click", function() {
@@ -50,7 +51,7 @@
                         div.className = "link selected";
                         selectedDiv = div;
 
-                        myIframe.contentWindow.postMessage('hello', '*');
+                        myIframe.contentWindow.postMessage(cell_idx, '*');
                     });
                     content.appendChild(div);
                 })();

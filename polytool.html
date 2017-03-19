@@ -9,14 +9,99 @@
 </head>
 <body>
     <script>
+        // vars used for rendering
+        var obj;
+        var mesh;
+        var materials =  [
+            // regular material
+            new THREE.MeshBasicMaterial( { 
+                color: 0x156289, 
+                opacity: 0.1,
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            } ),
+            // highlighted material
+            new THREE.MeshBasicMaterial( { 
+                color: 0xd46a6a, 
+                opacity: 0.1,
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            } )
+        ];
+        var forceFaceMats = new THREE.MultiMaterial(materials);
+        var geometry = new THREE.Geometry();
+        var face3s = [];
+
+        // .obj model info
+        var vertices = [];
+        var edges = [];
+        var half_faces = [];
+        var cells = [];
+
+        // half-face definition
+        function half_face() {
+            this.id = undefined;
+            this.indices = [];
+            this.adjacent = [];
+            // mesh_index is used to change the color
+            this.face3_indices = [];
+        }
+
+        // face defintion
+        function face() {
+            this.hfa = undefined;
+            this.hfb = undefined;
+        }
+
+        // edge definition
+        function edge() {
+            this.va = undefined;
+            this.vb = undefined;
+            this.faces = [];
+        }
+
+        // cells definition
+        function cell() {
+            this.hfs = [];
+        }
+
+        var pre_face3s_indices = [];
         window.onmessage = function(e){
             if (e.data == 'hello') {
                 alert('It works!');
                 //console.log(e.origin);
             }
+
+            // unhighlight the previous highlighted cells
+            for (var i = 0; i < pre_face3s_indices.length; i++) {
+                face3s[pre_face3s_indices[i]].materialIndex = 0;
+            }
+
+            pre_face3s_indices = [];
+            var cell_idx = e.data;
+            for (var i = 0; i < cells[cell_idx].hfs.length; i++) {
+                var face3_length = cells[cell_idx].hfs[i].face3_indices.length;
+                for (var j = 0; j < face3_length; j++) {
+                    var index = cells[cell_idx].hfs[i].face3_indices[j];
+                    face3s[index].materialIndex = 1;
+                    pre_face3s_indices.push(index);
+                }
+            }
+
+            // generate new THREE.Geometry object because
+            // http://stackoverflow.com/questions/12468906/three-js-updating-geometry-face-materialindex
+            geometry = new THREE.Geometry();
+            geometry.vertices = vertices;
+            geometry.faces = face3s;
+            scene.remove(mesh);
+            mesh = new THREE.Mesh(geometry, forceFaceMats);
+            mesh.rotation.y = targetRotation;
+            scene.add(mesh);
         };
         
-        var modelPath = 'model/obj_test1_converted.obj'
+        var modelPath = 'model/test2.obj'
         var targetRotation = 0;
         var targetRotationOnMouseDown = 0;
         var mouseX = 0;
@@ -51,69 +136,10 @@
         var renderer = new THREE.WebGLRenderer();
         
         renderer.setSize(window.innerWidth, window.innerHeight);
-        
-        var geometry = new THREE.CubeGeometry(1,1,1);
-        var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
-        var cube = new THREE.Mesh(geometry, material);
 
         //var loader = new THREE.OBJLoader();
 
-        // vars used for rendering
-        var obj;
-        var mesh;
-        var materials =  [
-            // regular material
-            new THREE.MeshBasicMaterial( { 
-                color: 0x156289, 
-                opacity: 0.1,
-                transparent: true,
-                side: THREE.DoubleSide,
-                depthWrite: false
-            } ),
-            // highlighted material
-            new THREE.MeshBasicMaterial( { 
-                color: 0xd46a6a, 
-                opacity: 0.1,
-                transparent: true,
-                side: THREE.DoubleSide,
-                depthWrite: false
-            } )
-        ];
-        var forceFaceMats = new THREE.MultiMaterial(materials);
-        var geometry = new THREE.Geometry();
 
-        // .obj model info
-        var vertices = [];
-        var edges = [];
-        var half_faces = [];
-        var cells = [];
-
-        // half-face definition
-        function half_face() {
-            this.id = undefined;
-            this.indices = [];
-            this.adjacent = [];
-            // mesh_index is used to change the color
-            this.face3_indices = [];
-        }
-
-        // face defintion
-        function face() {
-            this.hfa = undefined;
-            this.hfb = undefined;
-        }
-
-        // edge definition
-        function edge() {
-            this.va = undefined;
-            this.vb = undefined;
-            this.faces = [];
-        }
-
-        // cells definition
-        function cell() {
-            this.hfs = [];
-        }
       //   loader.load(modelPath, function ( object ) {
       //     //scene.add( object );
       //     obj = object;
@@ -148,6 +174,9 @@
       // } );
 
         window.onload = function() {
+            var light = new THREE.PointLight( 0xff0000, 1, 100 );
+            light.position.set( 30, 30, 30 );
+            scene.add( light );
             read_obj_model(vertices, half_faces, edges);
         };
 
@@ -158,8 +187,6 @@
         camera.position.z = 80;
         function render() {
             requestAnimationFrame(render);
-            cube.rotation.x += 0.1;
-            cube.rotation.y += 0.1;
             mesh.rotation.y += ( targetRotation - mesh.rotation.y ) * 0.05;
             //obj.rotation.y += 0.5;
             renderer.render(scene, camera);
@@ -265,6 +292,7 @@
 
         function read_obj_model(vertices, half_faces, edges) {
             $.get(modelPath, function(data) {    
+                //geometry.vertices = vertices;
                 var lines = data.split("\n");
                 var face3_index = 0;
                 var hf_index = 0;
@@ -277,7 +305,7 @@
                         });
                         var v = new THREE.Vector3(t[0], t[1], t[2]);
                         vertices.push(v); 
-                        geometry.vertices.push(v);                 
+                        //geometry.vertices.push(v);                 
                     }
                     else if (tokens[0] == 'f') {
                         //console.log("HI");
@@ -305,7 +333,8 @@
                         var length = hf.indices.length;
                         for (var i = 1; i < length - 1; i++) {
                             var face3 = new THREE.Face3(hf.indices[0], hf.indices[i], hf.indices[i + 1], undefined, undefined, 0);
-                            geometry.faces.push(face3);
+                            face3s.push(face3);
+                            //geometry.faces.push(face3);
 
                             // record mesh_index
                             hf.face3_indices.push(face3_index);
@@ -316,6 +345,9 @@
                         //console.log(edges);
                     }
                 });
+
+                geometry.vertices = vertices;
+                geometry.faces = face3s;
                 mesh = new THREE.Mesh(geometry, forceFaceMats);
                 scene.add(mesh);
                 render();
@@ -339,25 +371,30 @@
                 console.log(cells);
                 console.log(half_faces);
                 console.log(edges);
+                console.log(geometry);
             });
         }
 
+        var eps = 0.1;
         function get_angle(vertices, edge, index, ref_axis) {
             var vector_a = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[0].hfa.indices);
             var vector_b = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[index].hfa.indices);
             var axis = new THREE.Vector3();
+            // vector_a may be parallel to vector_b. Use eps to deal with this corner case.
             axis.crossVectors(vector_a, vector_b);
             var angle = vector_a.angleTo(vector_b);
+      
+            if (axis.length() > eps && axis.dot(ref_axis) < 0) {
+                angle += Math.PI;
+            }
             // if (edge.va == 2 && edge.vb == 6) {
             //     console.log(ref_axis);
+            //     console.log(axis);
+            //     console.log(axis.dot(ref_axis));
             //     console.log(edge.faces[0]);
             //     console.log(edge.faces[index]);
             //     console.log(angle);
             // }
-            
-            if (axis.dot(ref_axis) < 0) {
-                angle += Math.PI;
-            }
             return angle;
         }
 
@@ -365,8 +402,8 @@
             // Use simple selection sort
             // total_face won't be very large. Selection sort won't be much slower than quick sort, even faster.
             var total_face = edge.faces.length;
-            if (total_face < 2)
-                return;
+            // if (total_face < 2)
+            //     return;
             // var vector_a = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[0].hfa.indices);
             // var vector_b = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[1].hfa.indices);
             // var ref_axis = new THREE.Vector3();
