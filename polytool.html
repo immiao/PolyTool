@@ -101,7 +101,7 @@
             scene.add(mesh);
         };
         
-        var modelPath = 'model/test2.obj'
+        var modelPath = 'model/obj_test3_converted.obj'
         var targetRotation = 0;
         var targetRotationOnMouseDown = 0;
         var mouseX = 0;
@@ -183,6 +183,7 @@
         document.body.appendChild(renderer.domElement);
 
         //scene.add(cube);
+        //camera.position.x = 20;
         camera.position.y = 15;
         camera.position.z = 80;
         function render() {
@@ -259,12 +260,43 @@
         function get_perpendicular_vector(v_a, v_b, face_indices) {
             //console.log(v_a);
             var center = get_center(face_indices);
+            //console.log(v_a, v_b, center);
             var e_vector = new THREE.Vector3();
             e_vector.subVectors(v_b, v_a);
             var v = center.sub(v_a);
+            //console.log(e_vector);
+            var r = v.sub(e_vector.multiplyScalar(v.dot(e_vector) / e_vector.lengthSq()));
+            //console.log(r);
             return v.sub(e_vector.multiplyScalar(v.dot(e_vector) / e_vector.lengthSq()));
         }
 
+        var eps = 0.1;
+        function get_angle(vertices, edge, index, ref_axis) {
+            // if (!(edge.va == 4 && edge.vb == 18))
+            //     return;
+            var vector_a = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[0].hfa.indices);
+            var vector_b = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[index].hfa.indices);
+            var axis = new THREE.Vector3();
+            // vector_a may be parallel to vector_b. Use eps to deal with this corner case.
+            axis.crossVectors(vector_a, vector_b);
+            var angle = vector_a.angleTo(vector_b);
+      
+            if (axis.length() > eps && axis.dot(ref_axis) < 0) {
+                // angle += Math.PI; // fuck this bug, spent me 2 hours
+                angle = Math.PI * 2 - angle;
+            }
+            // if (edge.va == 4 && edge.vb == 18) {
+            //     // console.log(vector_a);
+            //     // console.log(vector_b);
+            //     // //console.log(ref_axis);
+            //     // console.log(axis);
+            //     // console.log(axis.dot(ref_axis));
+            //     console.log(edge.faces[0]);
+            //     console.log(edge.faces[index]);
+            //     console.log(angle);
+            // }
+            return angle;
+        }
         // function isValidNormal(index_a, index_b, v_index_a, v_index_b) {
         //     var length = index_a.length;
         //     var center_a = getCenter(index_a);
@@ -373,29 +405,6 @@
                 console.log(edges);
                 console.log(geometry);
             });
-        }
-
-        var eps = 0.1;
-        function get_angle(vertices, edge, index, ref_axis) {
-            var vector_a = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[0].hfa.indices);
-            var vector_b = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[index].hfa.indices);
-            var axis = new THREE.Vector3();
-            // vector_a may be parallel to vector_b. Use eps to deal with this corner case.
-            axis.crossVectors(vector_a, vector_b);
-            var angle = vector_a.angleTo(vector_b);
-      
-            if (axis.length() > eps && axis.dot(ref_axis) < 0) {
-                angle += Math.PI;
-            }
-            // if (edge.va == 2 && edge.vb == 6) {
-            //     console.log(ref_axis);
-            //     console.log(axis);
-            //     console.log(axis.dot(ref_axis));
-            //     console.log(edge.faces[0]);
-            //     console.log(edge.faces[index]);
-            //     console.log(angle);
-            // }
-            return angle;
         }
 
         function connect_around(vertices, edge) {
