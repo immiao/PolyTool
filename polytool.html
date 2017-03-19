@@ -12,7 +12,8 @@
         // vars used for rendering
         var obj;
         var mesh;
-        var materials =  [
+        var eps = 0.1;
+        var forceFaceMats =  [
             // regular material
             new THREE.MeshBasicMaterial( { 
                 color: 0x156289, 
@@ -30,7 +31,7 @@
                 depthWrite: false
             } )
         ];
-        var forceFaceMats = new THREE.MultiMaterial(materials);
+        //var forceFaceMats = new THREE.MultiMaterial(materials);
         var geometry = new THREE.Geometry();
         var face3s = [];
 
@@ -101,7 +102,7 @@
             scene.add(mesh);
         };
         
-        var modelPath = 'model/obj_test3_converted.obj'
+        var modelPath = 'model/obj_test1_converted.obj'
         var targetRotation = 0;
         var targetRotationOnMouseDown = 0;
         var mouseX = 0;
@@ -174,18 +175,19 @@
       // } );
 
         window.onload = function() {
-            var light = new THREE.PointLight( 0xff0000, 1, 100 );
-            light.position.set( 30, 30, 30 );
-            scene.add( light );
-            read_obj_model(vertices, half_faces, edges);
-        };
-
-        document.body.appendChild(renderer.domElement);
+            // var light = new THREE.PointLight( 0xff0000, 1, 100 );
+            // light.position.set( 30, 30, 30 );
+            // scene.add( light );
+                    document.body.appendChild(renderer.domElement);
 
         //scene.add(cube);
         //camera.position.x = 20;
         camera.position.y = 15;
-        camera.position.z = 80;
+        camera.position.z = 50;
+            read_obj_model(vertices, half_faces, edges);
+        };
+
+
         function render() {
             requestAnimationFrame(render);
             mesh.rotation.y += ( targetRotation - mesh.rotation.y ) * 0.05;
@@ -269,8 +271,6 @@
             //console.log(r);
             return v.sub(e_vector.multiplyScalar(v.dot(e_vector) / e_vector.lengthSq()));
         }
-
-        var eps = 0.1;
         function get_angle(vertices, edge, index, ref_axis) {
             // if (!(edge.va == 4 && edge.vb == 18))
             //     return;
@@ -498,7 +498,7 @@
         //         }
         //     }
         // }
-
+        
     </script>
 </body>
 </html>
