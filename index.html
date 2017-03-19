@@ -29,27 +29,34 @@
                 console.log('received')
                 //alert('Child to Parent');
             }
+            var cells = [];
+            console.log(e.data);
+            var length = e.data;
+            //var cells = ["Cell 1", "Cell 2", "Cell 3", "Cell 4"];
+            for (var i = 0; i < length; i++) {
+                cells.push("Cell " + (i + 1));
+            }
+            var content = document.getElementById('content');
+            var myIframe = document.getElementById('viewer');
+
+            var selectedDiv = null;
+            for (var i = 0; i < cells.length; i++) {
+                (function(){
+                    var div = document.createElement("div");
+                    div.className = "link";
+                    div.textContent = cells[i];
+                    div.addEventListener("click", function() {
+                        if (selectedDiv != null) selectedDiv.className = "link";
+                        div.className = "link selected";
+                        selectedDiv = div;
+
+                        myIframe.contentWindow.postMessage('hello', '*');
+                    });
+                    content.appendChild(div);
+                })();
+            }
         };
-        var cells = ["Cell 1", "Cell 2", "Cell 3", "Cell 4"];
-        var content = document.getElementById('content');
-        var myIframe = document.getElementById('viewer');
 
-        var selectedDiv = null;
-        for (var i = 0; i < cells.length; i++) {
-            (function(){
-                var div = document.createElement("div");
-                div.className = "link";
-                div.textContent = cells[i];
-                div.addEventListener("click", function() {
-                    if (selectedDiv != null) selectedDiv.className = "link";
-                    div.className = "link selected";
-                    selectedDiv = div;
-
-                    myIframe.contentWindow.postMessage('hello', '*');
-                });
-                content.appendChild(div);
-            })();
-        }
     </script>
 
 </body>

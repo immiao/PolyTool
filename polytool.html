@@ -56,20 +56,45 @@
         var material = new THREE.MeshBasicMaterial({color: 0x00ff00});
         var cube = new THREE.Mesh(geometry, material);
 
-        var loader = new THREE.OBJLoader();
+        //var loader = new THREE.OBJLoader();
 
+        // vars used for rendering
         var obj;
         var mesh;
+        var materials =  [
+            // regular material
+            new THREE.MeshBasicMaterial( { 
+                color: 0x156289, 
+                opacity: 0.1,
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            } ),
+            // highlighted material
+            new THREE.MeshBasicMaterial( { 
+                color: 0xd46a6a, 
+                opacity: 0.1,
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false
+            } )
+        ];
+        var forceFaceMats = new THREE.MultiMaterial(materials);
+        var geometry = new THREE.Geometry();
 
         // .obj model info
         var vertices = [];
         var edges = [];
         var half_faces = [];
+        var cells = [];
 
         // half-face definition
         function half_face() {
+            this.id = undefined;
             this.indices = [];
             this.adjacent = [];
+            // mesh_index is used to change the color
+            this.face3_indices = [];
         }
 
         // face defintion
@@ -85,44 +110,52 @@
             this.faces = [];
         }
 
-        var forceFace =  new THREE.MeshBasicMaterial( { 
-            color: 0x156289, 
-                // shading: THREE.FlatShading,
-                // opacity: 0.05,
-                opacity: 0.1,
-                transparent: true,
-                side: THREE.DoubleSide,
-
-                // blending: THREE.AdditiveBlending,
-
-                depthWrite: false
-            } )
-
-        loader.load(modelPath, function ( object ) {
-          //scene.add( object );
-          obj = object;
+        // cells definition
+        function cell() {
+            this.hfs = [];
+        }
+      //   loader.load(modelPath, function ( object ) {
+      //     //scene.add( object );
+      //     obj = object;
           
-          object.traverse( function ( child ) {
-            console.log(child);
+      //     object.traverse( function ( child ) {
+      //       //console.log(child);
 
-            if ( child instanceof THREE.Mesh ) {
-                //console.log(child.geometry.attributes.position);
-                mesh = new THREE.Mesh(child.geometry, forceFace);
-                scene.add(mesh);
-            }
+      //       if ( child instanceof THREE.Mesh ) {
+      //           //console.log(child.geometry.attributes.position);
+      //           var forceFace =  new THREE.MeshBasicMaterial( { 
+      //               color: 0x156289, 
+      //           // shading: THREE.FlatShading,
+      //           // opacity: 0.05,
+      //           opacity: 0.1,
+      //           transparent: true,
+      //           side: THREE.DoubleSide,
 
-        } );
-          // read model from .obj files and then construct half-faces in the callback function
-          read_obj_model(vertices, half_faces, edges);
-          render();
-          //console.log(object.geometry);
-      } );
+      //           // blending: THREE.AdditiveBlending,
+
+      //           depthWrite: false
+      //       } );
+
+      //           mesh = new THREE.Mesh(child.geometry, forceFace);
+      //           console.log(mesh);
+      //           scene.add(mesh);
+      //       }
+
+      //   } );
+      //     // read model from .obj files and then construct half-faces in the callback function
+
+      //     //console.log(object.geometry);
+      // } );
+
+        window.onload = function() {
+            read_obj_model(vertices, half_faces, edges);
+        };
 
         document.body.appendChild(renderer.domElement);
 
         //scene.add(cube);
         camera.position.y = 15;
-        camera.position.z = 50;
+        camera.position.z = 80;
         function render() {
             requestAnimationFrame(render);
             cube.rotation.x += 0.1;
@@ -199,7 +232,8 @@
         function get_perpendicular_vector(v_a, v_b, face_indices) {
             //console.log(v_a);
             var center = get_center(face_indices);
-            var e_vector = v_b.sub(v_a);
+            var e_vector = new THREE.Vector3();
+            e_vector.subVectors(v_b, v_a);
             var v = center.sub(v_a);
             return v.sub(e_vector.multiplyScalar(v.dot(e_vector) / e_vector.lengthSq()));
         }
@@ -232,16 +266,22 @@
         function read_obj_model(vertices, half_faces, edges) {
             $.get(modelPath, function(data) {    
                 var lines = data.split("\n");
+                var face3_index = 0;
+                var hf_index = 0;
                 $.each(lines, function(n, line) {
                     tokens = line.split(" ");
+                    //console.log(tokens[0]);
                     if (tokens[0] == 'v') {
                         var t = tokens.slice(1, 4).map(function(item) {
                             return parseFloat(item);
                         });
-                        vertices.push(new THREE.Vector3(t[0], t[1], t[2]));                    
+                        var v = new THREE.Vector3(t[0], t[1], t[2]);
+                        vertices.push(v); 
+                        geometry.vertices.push(v);                 
                     }
                     else if (tokens[0] == 'f') {
-                        aaa = false;
+                        //console.log("HI");
+                        // construct 2 half-faces and put them into one face
                         var hf = new half_face();
                         for (var i = 1; i < tokens.length; i++) {
                             var indices = tokens[i].split("/");
@@ -257,9 +297,29 @@
                         f.hfa = hf;
                         f.hfb = symhf;
                         addFaceToEdge(f, edges);
+                        hf.id = hf_index;
+                        symhf.id = hf_index + 1;
+                        hf_index += 2;
+
+                        // construct mesh for rendering
+                        var length = hf.indices.length;
+                        for (var i = 1; i < length - 1; i++) {
+                            var face3 = new THREE.Face3(hf.indices[0], hf.indices[i], hf.indices[i + 1], undefined, undefined, 0);
+                            geometry.faces.push(face3);
+
+                            // record mesh_index
+                            hf.face3_indices.push(face3_index);
+                            symhf.face3_indices.push(face3_index);
+                            face3_index++;
+                        }
+
                         //console.log(edges);
                     }
                 });
+                mesh = new THREE.Mesh(geometry, forceFaceMats);
+                scene.add(mesh);
+                render();
+                //console.log(mesh);
                 // var test = [];
                 // test.push(half_faces[0]);
                 // console.log(test);
@@ -269,12 +329,16 @@
                 // console.log(half_faces[0]);
                 // console.log(test);
                 connect_half_faces(vertices, edges);
+                find_cells(cells, half_faces);
+                parent.postMessage(cells.length, '*');
                 //console.log(vertices);
                 //var test = getCenter(half_faces[0].indices);
                 //console.log(test);
                 //console.log(vertices[0][0]);
                 //console.log(faces);
-                //console.log(edges);
+                console.log(cells);
+                console.log(half_faces);
+                console.log(edges);
             });
         }
 
@@ -284,6 +348,13 @@
             var axis = new THREE.Vector3();
             axis.crossVectors(vector_a, vector_b);
             var angle = vector_a.angleTo(vector_b);
+            // if (edge.va == 2 && edge.vb == 6) {
+            //     console.log(ref_axis);
+            //     console.log(edge.faces[0]);
+            //     console.log(edge.faces[index]);
+            //     console.log(angle);
+            // }
+            
             if (axis.dot(ref_axis) < 0) {
                 angle += Math.PI;
             }
@@ -294,10 +365,15 @@
             // Use simple selection sort
             // total_face won't be very large. Selection sort won't be much slower than quick sort, even faster.
             var total_face = edge.faces.length;
-            var vector_a = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[0].hfa.indices);
-            var vector_b = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[1].hfa.indices);
+            if (total_face < 2)
+                return;
+            // var vector_a = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[0].hfa.indices);
+            // var vector_b = get_perpendicular_vector(vertices[edge.va], vertices[edge.vb], edge.faces[1].hfa.indices);
+            // var ref_axis = new THREE.Vector3();
+            // ref_axis.crossVectors(vector_a, vector_b);
+
             var ref_axis = new THREE.Vector3();
-            ref_axis.crossVectors(vector_a, vector_b);
+            ref_axis = ref_axis.subVectors(vertices[edge.vb], vertices[edge.va]);
 
             for (var i = 1; i < total_face; i++) {
                 var min_angle = get_angle(vertices, edge, i, ref_axis);
@@ -320,8 +396,8 @@
             for (var i = 0; i < total_face; i++) {
                 var f0 = edge.faces[i];
                 var f1 = edge.faces[(i + 1) % total_face];
-                f0.hfb.adjacent.push(f1.hfa);
-                f1.hfa.adjacent.push(f0.hfb);
+                f0.hfa.adjacent.push(f1.hfb);
+                f1.hfb.adjacent.push(f0.hfa);
             }
             //console.log(edge);
         }
@@ -332,6 +408,38 @@
                 connect_around(vertices, edges[i]);
             }
         }
+
+        function find_cells(cells, half_faces) {
+            var vstd = [];
+            var length = half_faces.length;
+            for (var i = 0; i < length; i++)
+                vstd.push(false);
+            for (var i = 0; i < length; i++) {
+                if (vstd[i] == false)
+                    bfs(cells, half_faces, vstd, i);
+            }
+        }
+
+        function bfs(cells, half_faces, vstd, start_index) {
+            var queue = [];
+            var new_cell = new cell();
+            queue.push(start_index);
+            vstd[start_index] = true;
+            while (queue.length != 0) {
+                var front = queue.shift();
+                new_cell.hfs.push(half_faces[front]);
+                var length = half_faces[front].adjacent.length;
+                for (var i = 0; i < length; i++) {
+                    var index = half_faces[front].adjacent[i].id;
+                    if (vstd[index] == false) {
+                        vstd[index] = true;
+                        queue.push(half_faces[index].id);
+                    }
+                }
+            }
+            cells.push(new_cell);
+        }
+
         // function connect_half_faces(vertices, half_faces) {
         //     for (var i = 0; i < half_faces.length; i++) {
         //         var extended_index_a = half_faces[i].indices.concat(half_faces[i].indices.slice(0, 2));
