@@ -9,6 +9,13 @@
     box-sizing: border-box;
 }
 
+img {
+    max-width:80%;
+    height:auto;
+    margin-left: 20px;
+    margin-top: 20px;
+}
+
 html {
     height: 100%;
 }
