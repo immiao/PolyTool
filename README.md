@@ -11,7 +11,7 @@ Penn Design RA project - expand half-edge to half-face to find cells in a given 
 
 *	edge is represented by 2 vertices in ascending order
 
-*	sort half-faces around each edge by the clockwise or counter-clockwise angle
+*	sort faces (faces are represented by two half-faces) around each edge by the clockwise or counter-clockwise angle
 
 	* for each face, calculate the their center and calculate a vector perpendicular to the edge
 
