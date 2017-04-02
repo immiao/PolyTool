@@ -107,5 +107,5 @@ def writeToFile(filename):
 		file.write("\n")
 		
 if __name__ == "__main__":
-	convert("../model/obj_test3.obj")
-	writeToFile("../model/obj_test3_converted.obj")
+	convert("../model/obj_test5.obj")
+	writeToFile("../model/obj_test5_converted.obj")

@@ -6,13 +6,22 @@
     <script src="js/three.min.js"></script>
     <script src="js/OBJLoader.js"></script>
     <script src="js/jquery-3.1.1.min.js"></script>
+    <link rel="stylesheet" href="css/polytool.css">
 </head>
 <body>
+
+<div id="container">
+    <div id="debugContainer">
+        <canvas id="debugCanvas">
+        </canvas>
+    </div>
+    <div id="rendererContainer"></div>
+</div>
     <script>
         // vars used for rendering
         var obj;
         var mesh;
-        var eps = 0.1;
+        var eps = 0.01;
         var forceFaceMats =  [
             // regular material
             new THREE.MeshBasicMaterial( { 
@@ -102,7 +111,7 @@
             scene.add(mesh);
         };
         
-        var modelPath = 'model/obj_test3_converted.obj'
+        var modelPath = 'model/obj_test5_converted.obj'
         var targetRotation = 0;
         var targetRotationOnMouseDown = 0;
         var mouseX = 0;
@@ -178,13 +187,26 @@
             // var light = new THREE.PointLight( 0xff0000, 1, 100 );
             // light.position.set( 30, 30, 30 );
             // scene.add( light );
-                    document.body.appendChild(renderer.domElement);
+                    //document.body.appendChild(renderer.domElement);
 
         //scene.add(cube);
         //camera.position.x = 20;
         camera.position.y = 10;
-        camera.position.z = 70;
+        camera.position.z = 50;
             read_obj_model(vertices, half_faces, edges);
+
+canvas = document.getElementById("debugCanvas");
+ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+var container2 = document.getElementById("rendererContainer");
+container2.appendChild(renderer.domElement);
+
+
+// var container1 = document.getElementById("container1");
+// container1.appendChild(canvas);
         };
 
 
@@ -193,6 +215,20 @@
             mesh.rotation.y += ( targetRotation - mesh.rotation.y ) * 0.05;
             //obj.rotation.y += 0.5;
             renderer.render(scene, camera);
+//console.log(mesh.rotation);
+var length = vertices.length;
+ctx.clearRect(0, 0, canvas.width, canvas.height);
+for (var i = 0; i < length; i++) {
+    var pos = new THREE.Vector3(vertices[i].x, vertices[i].y, vertices[i].z);
+    pos.applyMatrix4(mesh.matrixWorld);
+    pos.project(camera);
+
+pos.x = (pos.x + 1) * 0.5 * canvas.width;
+pos.y = (-pos.y + 1) * 0.5 * canvas.height;
+ctx.font = "10px Arial";
+ctx.strokeText(i + 1, pos.x, pos.y);
+    //console.log(textPos[i]);
+}
             //parent.postMessage('hi', '*');
         }
         //console.log(parent);
@@ -403,7 +439,7 @@
                 console.log(cells);
                 console.log(half_faces);
                 console.log(edges);
-                console.log(geometry);
+                console.log(mesh);
             });
         }
 
