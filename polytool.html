@@ -6,6 +6,8 @@
     <script src="js/three.min.js"></script>
     <script src="js/OBJLoader.js"></script>
     <script src="js/jquery-3.1.1.min.js"></script>
+    <script src="js/require.js"></script>
+    <script src="js/TrackballControls.js"></script>
     <link rel="stylesheet" href="css/polytool.css">
 </head>
 <body>
@@ -111,7 +113,7 @@
             scene.add(mesh);
         };
         
-        var modelPath = 'model/obj_test5_converted.obj'
+        var modelPath = 'model/box_converted.obj'
         var targetRotation = 0;
         var targetRotationOnMouseDown = 0;
         var mouseX = 0;
@@ -124,13 +126,15 @@
             event.preventDefault();
             document.addEventListener( 'mousemove', onDocumentMouseMove, false );
             document.addEventListener( 'mouseup', onDocumentMouseUp, false );
-            mouseXOnMouseDown = event.clientX - windowHalfX;
+            mouseXOnMouseDown = event.clientX ;
+            //console.log(event.clientX);
             targetRotationOnMouseDown = targetRotation;
         }
 
         function onDocumentMouseMove( event ) {
-            mouseX = event.clientX - windowHalfX;
+            mouseX = event.clientX ;
             targetRotation = targetRotationOnMouseDown + ( mouseX - mouseXOnMouseDown ) * 0.02;
+            //console.log(targetRotation);
         }
 
         function onDocumentMouseUp( event ) {
@@ -192,7 +196,7 @@
         //scene.add(cube);
         //camera.position.x = 20;
         camera.position.y = 10;
-        camera.position.z = 50;
+        camera.position.z = 700;
             read_obj_model(vertices, half_faces, edges);
 
 canvas = document.getElementById("debugCanvas");
@@ -204,31 +208,50 @@ canvas.height = window.innerHeight;
 var container2 = document.getElementById("rendererContainer");
 container2.appendChild(renderer.domElement);
 
+                controls = new THREE.TrackballControls( camera );
+                controls.rotateSpeed = 3.0;
+                controls.zoomSpeed = 1.2;
+                controls.panSpeed = 0.8;
+                controls.noZoom = false;
+                controls.noPan = false;
+                controls.staticMoving = true;
+                controls.dynamicDampingFactor = 0.3;
+                controls.keys = [ 65, 83, 68 ];
+                controls.addEventListener( 'change', render );
 
 // var container1 = document.getElementById("container1");
 // container1.appendChild(canvas);
+
         };
 
 
-        function render() {
-            requestAnimationFrame(render);
-            mesh.rotation.y += ( targetRotation - mesh.rotation.y ) * 0.05;
+        function animate() {
+            requestAnimationFrame(animate);
+            //controls.update();
+            //mesh.rotation.y += ( targetRotation - mesh.rotation.y ) * 0.05;
             //obj.rotation.y += 0.5;
-            renderer.render(scene, camera);
-//console.log(mesh.rotation);
-var length = vertices.length;
-ctx.clearRect(0, 0, canvas.width, canvas.height);
-for (var i = 0; i < length; i++) {
-    var pos = new THREE.Vector3(vertices[i].x, vertices[i].y, vertices[i].z);
-    pos.applyMatrix4(mesh.matrixWorld);
-    pos.project(camera);
 
-pos.x = (pos.x + 1) * 0.5 * canvas.width;
-pos.y = (-pos.y + 1) * 0.5 * canvas.height;
-ctx.font = "10px Arial";
-ctx.strokeText(i + 1, pos.x, pos.y);
     //console.log(textPos[i]);
-}
+            controls.update();
+
+        }
+
+        function render() {
+            console.log("render");
+            renderer.render(scene, camera);
+            //console.log(mesh.rotation);
+            var length = vertices.length;
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            for (var i = 0; i < length; i++) {
+                var pos = new THREE.Vector3(vertices[i].x, vertices[i].y, vertices[i].z);
+                pos.applyMatrix4(mesh.matrixWorld);
+                pos.project(camera);
+
+                pos.x = (pos.x + 1) * 0.5 * canvas.width;
+                pos.y = (-pos.y + 1) * 0.5 * canvas.height;
+                ctx.font = "10px Arial";
+                ctx.strokeText(i, pos.x, pos.y);
+            }
             //parent.postMessage('hi', '*');
         }
         //console.log(parent);
@@ -321,7 +344,7 @@ ctx.strokeText(i + 1, pos.x, pos.y);
                 // angle += Math.PI; // fuck this bug, spent me 2 hours
                 angle = Math.PI * 2 - angle;
             }
-            // if (edge.va == 4 && edge.vb == 18) {
+            // if (edge.va == 4 && edge.vb == 11) {
             //     // console.log(vector_a);
             //     // console.log(vector_b);
             //     // //console.log(ref_axis);
@@ -418,7 +441,9 @@ ctx.strokeText(i + 1, pos.x, pos.y);
                 geometry.faces = face3s;
                 mesh = new THREE.Mesh(geometry, forceFaceMats);
                 scene.add(mesh);
+
                 render();
+                animate();
                 //console.log(mesh);
                 // var test = [];
                 // test.push(half_faces[0]);
@@ -459,11 +484,16 @@ ctx.strokeText(i + 1, pos.x, pos.y);
 
             for (var i = 1; i < total_face; i++) {
                 var min_angle = get_angle(vertices, edge, i, ref_axis);
+
                 var min_index = i;
                 for (var j = i + 1; j < total_face; j++) {
                     var angle = get_angle(vertices, edge, j, ref_axis);
                     if (angle < min_angle) {
-                        angle = min_angle;
+            //                         if (edge.va == 4 && edge.vb == 11) {
+            //     console.log("min:" + angle + " min_angle: " + min_angle);
+            //     console.log("i : " + i + " j : " + j);
+            // }
+                        min_angle = angle;
                         min_index = j;
                     }
                 }
