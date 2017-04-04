@@ -232,7 +232,7 @@ if (container2.firstChild)
 container2.appendChild(renderer.domElement);
 
                 controls = new THREE.TrackballControls( camera );
-                controls.rotateSpeed = 3.0;
+                controls.rotateSpeed = 15.0;
                 controls.zoomSpeed = 1.2;
                 controls.panSpeed = 0.8;
                 controls.noZoom = false;
@@ -273,7 +273,7 @@ container2.appendChild(renderer.domElement);
                 pos.x = (pos.x + 1) * 0.5 * canvas.width;
                 pos.y = (-pos.y + 1) * 0.5 * canvas.height;
                 ctx.font = "10px Arial";
-                ctx.strokeText(i, pos.x, pos.y);
+                ctx.strokeText(i + 1, pos.x, pos.y);
             }
             //parent.postMessage('hi', '*');
         }
