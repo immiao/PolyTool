@@ -16,6 +16,10 @@
             <span></span>
             <span></span>
         </a>
+        <div id="content1">
+            <h2>Model</h2>
+        </div>
+
         <div id="content">
             <h2>Cells</h2>
         </div>
@@ -25,6 +29,11 @@
     <iframe id="viewer" src="polytool.html" allowfullscreen onmousewheel=""></iframe>
 
     <script>
+        function message() {
+            this.data = undefined;
+            this.type = undefined;
+        }
+
         window.onmessage = function(e){
             if (e.data == 'hi') {
                 console.log('received')
@@ -33,6 +42,7 @@
             var cells = [];
             //console.log(e.data);
             var length = e.data;
+            console.log(length);
             //var cells = ["Cell 1", "Cell 2", "Cell 3", "Cell 4"];
             for (var i = 0; i < length; i++) {
                 cells.push("Cell " + (i + 1));
@@ -40,11 +50,23 @@
             var content = document.getElementById('content');
             var myIframe = document.getElementById('viewer');
 
+            var elements = content.getElementsByClassName('link');
+            var l = elements.length;
+            //console.log(elements.length);
+            for (var i = 0; i < l; i++) {
+                content.removeChild(elements[0]);
+                //console.log("remove");
+            }
+
             var selectedDiv = null;
             for (var i = 0; i < cells.length; i++) {
                 (function(){
                     var div = document.createElement("div");
-                    var cell_idx = i;
+                    //var cell_idx = i;
+                    var msg = new message();
+                    msg.data = i;
+                    msg.type = "cell_idx";
+
                     div.className = "link";
                     div.textContent = cells[i];
                     div.addEventListener("click", function() {
@@ -52,13 +74,45 @@
                         div.className = "link selected";
                         selectedDiv = div;
 
-                        myIframe.contentWindow.postMessage(cell_idx, '*');
+                        myIframe.contentWindow.postMessage(msg, '*');
                     });
                     content.appendChild(div);
                 })();
             }
         };
 
+        window.onload = function() {
+            var models = ["basic.obj", 
+                "basic1.obj",
+                "box_converted.obj",
+                "f_n_18_converted.obj",
+                "obj_test1_converted.obj",
+                "obj_test3_converted.obj",
+                "obj_test5_converted.obj"];
+            var content = document.getElementById('content1');
+            var myIframe = document.getElementById('viewer');
+
+            var selectedDiv = null;
+            for (var i = 0; i < models.length; i++) {
+                (function(){
+                    var div = document.createElement("div");
+                    var msg = new message();
+                    msg.data = models[i];
+                    msg.type = "model_name";
+
+                    div.className = "link";
+                    div.textContent = models[i];
+                    div.addEventListener("click", function() {
+                        if (selectedDiv != null) selectedDiv.className = "link";
+                        div.className = "link selected";
+                        selectedDiv = div;
+
+                        myIframe.contentWindow.postMessage(msg, '*');
+                    });
+                    content.appendChild(div);
+                })();
+            }
+        }
     </script>
 
 </body>

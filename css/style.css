@@ -74,6 +74,24 @@ a {
             text-decoration: underline;
         }
 
+    #panel #content1 {
+        padding: 0px 20px;
+    }
+
+    #panel #content1 .link {
+        color: #2194CE;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    #panel #content1 .selected {
+        color: #ff0000;
+    }
+
+        #panel #content1 .link:hover {
+            text-decoration: underline;
+        }
+
 #viewer {
     position: absolute;
     border: 0px;

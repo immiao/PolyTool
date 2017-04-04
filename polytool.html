@@ -43,14 +43,14 @@
             } )
         ];
         //var forceFaceMats = new THREE.MultiMaterial(materials);
-        var geometry = new THREE.Geometry();
-        var face3s = [];
+        var geometry;// = new THREE.Geometry();
+        var face3s;// = [];
 
         // .obj model info
-        var vertices = [];
-        var edges = [];
-        var half_faces = [];
-        var cells = [];
+        var vertices;// = [];
+        var edges;// = [];
+        var half_faces;// = [];
+        var cells;// = [];
 
         // half-face definition
         function half_face() {
@@ -85,35 +85,42 @@
                 alert('It works!');
                 //console.log(e.origin);
             }
-
+            
+            if (e.data.type == 'cell_idx') {
             // unhighlight the previous highlighted cells
-            for (var i = 0; i < pre_face3s_indices.length; i++) {
-                face3s[pre_face3s_indices[i]].materialIndex = 0;
-            }
-
-            pre_face3s_indices = [];
-            var cell_idx = e.data;
-            for (var i = 0; i < cells[cell_idx].hfs.length; i++) {
-                var face3_length = cells[cell_idx].hfs[i].face3_indices.length;
-                for (var j = 0; j < face3_length; j++) {
-                    var index = cells[cell_idx].hfs[i].face3_indices[j];
-                    face3s[index].materialIndex = 1;
-                    pre_face3s_indices.push(index);
+                for (var i = 0; i < pre_face3s_indices.length; i++) {
+                    face3s[pre_face3s_indices[i]].materialIndex = 0;
                 }
-            }
 
-            // generate new THREE.Geometry object because
-            // http://stackoverflow.com/questions/12468906/three-js-updating-geometry-face-materialindex
-            geometry = new THREE.Geometry();
-            geometry.vertices = vertices;
-            geometry.faces = face3s;
-            scene.remove(mesh);
-            mesh = new THREE.Mesh(geometry, forceFaceMats);
-            mesh.rotation.y = targetRotation;
-            scene.add(mesh);
+                pre_face3s_indices = [];
+                var cell_idx = e.data.data;
+                for (var i = 0; i < cells[cell_idx].hfs.length; i++) {
+                    var face3_length = cells[cell_idx].hfs[i].face3_indices.length;
+                    for (var j = 0; j < face3_length; j++) {
+                        var index = cells[cell_idx].hfs[i].face3_indices[j];
+                        face3s[index].materialIndex = 1;
+                        pre_face3s_indices.push(index);
+                    }
+                }
+
+                // generate new THREE.Geometry object because
+                // http://stackoverflow.com/questions/12468906/three-js-updating-geometry-face-materialindex
+                geometry = new THREE.Geometry();
+                geometry.vertices = vertices;
+                geometry.faces = face3s;
+                scene.remove(mesh);
+                mesh = new THREE.Mesh(geometry, forceFaceMats);
+                //mesh.rotation.y = targetRotation;
+                scene.add(mesh);
+                render();
+            }
+            else if (e.data.type == 'model_name') {
+                modelPath = 'model/' + e.data.data;
+                window.onload();
+            }
         };
         
-        var modelPath = 'model/box_converted.obj'
+        var modelPath = 'model/basic1.obj'
         var targetRotation = 0;
         var targetRotationOnMouseDown = 0;
         var mouseX = 0;
@@ -142,14 +149,14 @@
             document.removeEventListener( 'mouseup', onDocumentMouseUp, false );
         }
 
-        var scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xffffff);
+        var scene;// = new THREE.Scene();
+        //scene.background = new THREE.Color(0xffffff);
 
-        var camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        var camera;// = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
         
-        var renderer = new THREE.WebGLRenderer();
+        var renderer;// = new THREE.WebGLRenderer();
         
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        //renderer.setSize(window.innerWidth, window.innerHeight);
 
         //var loader = new THREE.OBJLoader();
 
@@ -188,6 +195,20 @@
       // } );
 
         window.onload = function() {
+            geometry = new THREE.Geometry();
+            face3s = [];
+            vertices = [];
+            edges = [];
+            half_faces = [];
+            cells = [];
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0xffffff);
+
+            camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+        
+            renderer = new THREE.WebGLRenderer();
+        
+            renderer.setSize(window.innerWidth, window.innerHeight);
             // var light = new THREE.PointLight( 0xff0000, 1, 100 );
             // light.position.set( 30, 30, 30 );
             // scene.add( light );
@@ -196,7 +217,7 @@
         //scene.add(cube);
         //camera.position.x = 20;
         camera.position.y = 10;
-        camera.position.z = 700;
+        camera.position.z = 500;
             read_obj_model(vertices, half_faces, edges);
 
 canvas = document.getElementById("debugCanvas");
@@ -206,6 +227,8 @@ canvas.width = window.innerWidth;
 canvas.height = window.innerHeight;
 
 var container2 = document.getElementById("rendererContainer");
+if (container2.firstChild)
+    container2.removeChild(container2.firstChild);
 container2.appendChild(renderer.domElement);
 
                 controls = new THREE.TrackballControls( camera );
@@ -237,7 +260,7 @@ container2.appendChild(renderer.domElement);
         }
 
         function render() {
-            console.log("render");
+            //console.log("render");
             renderer.render(scene, camera);
             //console.log(mesh.rotation);
             var length = vertices.length;
