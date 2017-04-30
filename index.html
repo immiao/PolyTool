@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="utf-8">
@@ -24,6 +24,9 @@
             <h2>Cells</h2>
         </div>
 
+        <div id="face_content">
+            <h2>Faces</h2>
+        </div>
     </div>
 
     <iframe id="viewer" src="polytool.html" allowfullscreen onmousewheel=""></iframe>
@@ -35,27 +38,24 @@
         }
 
         window.onmessage = function(e){
-            if (e.data == 'hi') {
-                console.log('received')
-                //alert('Child to Parent');
-            }
+          // reload the left panel
+          if (e.data.type == 'cellsLength') {
             var cells = [];
             //console.log(e.data);
-            var length = e.data;
-            console.log(length);
+            var length = e.data.data;
+            console.log('Length: ' + length);
             //var cells = ["Cell 1", "Cell 2", "Cell 3", "Cell 4"];
             for (var i = 0; i < length; i++) {
                 cells.push("Cell " + (i + 1));
             }
-            var content = document.getElementById('content');
             var myIframe = document.getElementById('viewer');
 
+            // remove previous cells
+            var content = document.getElementById('content');
             var elements = content.getElementsByClassName('link');
             var l = elements.length;
-            //console.log(elements.length);
             for (var i = 0; i < l; i++) {
                 content.removeChild(elements[0]);
-                //console.log("remove");
             }
 
             var selectedDiv = null;
@@ -79,6 +79,47 @@
                     content.appendChild(div);
                 })();
             }
+          }
+          // list the face indices in the left panel
+          else if (e.data.type == 'facesLength') {
+            var faces = [];
+            var length = e.data.data;
+            for (var i = 0; i < length; i++) {
+              faces.push('Face ' + (i + 1));
+            }
+            var myIframe = document.getElementById('viewer');
+            // remove previous faces
+            var faceContent = document.getElementById('face_content');
+            var faceElements = faceContent.getElementsByClassName('link');
+            var l = faceElements.length;
+            for (var i = 0; i < l; i++) {
+              faceContent.removeChild(faceElements[0]);
+            }
+            var selectedDiv = null;
+
+            for (var i = 0; i < faces.length; i++) {
+              (function(){
+                var div = document.createElement("div");
+                var msg = new message();
+                msg.data = i;
+                msg.type = "face_idx";
+
+                div.className = "link";
+                div.textContent = faces[i];
+
+                div.addEventListener("click", function() {
+                  if (selectedDiv != null) selectedDiv.className = "link";
+                  div.className = "link selected";
+                  selectedDiv = div;
+
+                  myIframe.contentWindow.postMessage(msg, '*');
+                });
+
+                faceContent.appendChild(div);
+              })();
+            }
+          }
+          //for (var i = 0; i < )
         };
 
         window.onload = function() {

@@ -50,7 +50,8 @@
         var vertices;// = [];
         var edges;// = [];
         var half_faces;// = [];
-        var cells;// = [];
+var cells;// = [];
+var faces;
 
         // half-face definition
         function half_face() {
@@ -79,6 +80,10 @@
             this.hfs = [];
         }
 
+        function message() {
+          this.data = undefined;
+          this.type = undefined;
+        }
         var pre_face3s_indices = [];
         window.onmessage = function(e){
             if (e.data == 'hello') {
@@ -120,7 +125,7 @@
             }
         };
         
-        var modelPath = 'model/basic1.obj'
+        var modelPath = 'model/basic.obj'
         var targetRotation = 0;
         var targetRotationOnMouseDown = 0;
         var mouseX = 0;
@@ -200,7 +205,8 @@
             vertices = [];
             edges = [];
             half_faces = [];
-            cells = [];
+          cells = [];
+          faces = [];
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0xffffff);
 
@@ -216,8 +222,9 @@
 
         //scene.add(cube);
         //camera.position.x = 20;
-        camera.position.y = 10;
-        camera.position.z = 500;
+        camera.position.y = 100;
+        camera.position.x = 10;
+        camera.position.z = 0;
             read_obj_model(vertices, half_faces, edges);
 
 canvas = document.getElementById("debugCanvas");
@@ -437,7 +444,8 @@ container2.appendChild(renderer.domElement);
                         half_faces.push(symhf);
                         var f = new face();
                         f.hfa = hf;
-                        f.hfb = symhf;
+                      f.hfb = symhf;
+                      faces.push(f);
                         addFaceToEdge(f, edges);
                         hf.id = hf_index;
                         symhf.id = hf_index + 1;
@@ -478,7 +486,16 @@ container2.appendChild(renderer.domElement);
                 // console.log(test);
                 connect_half_faces(vertices, edges);
                 find_cells(cells, half_faces);
-                parent.postMessage(cells.length, '*');
+              var msg = new message();
+              msg.data = cells.length;
+              msg.type = 'cellsLength';
+              parent.postMessage(msg, '*');
+
+              msg = new message();
+              msg.data = faces.length;
+              msg.type = 'facesLength';
+
+              parent.postMessage(msg, '*');
                 //console.log(vertices);
                 //var test = getCenter(half_faces[0].indices);
                 //console.log(test);

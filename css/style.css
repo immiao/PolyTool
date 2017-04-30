@@ -55,6 +55,24 @@ a {
     overflow: auto;
     background: #fafafa;
 }
+    
+    #panel #face_content {
+        padding: 0px 20px;
+    }
+
+    #panel #face_content .link {
+        color: #2194CE;
+        text-decoration: none;
+        cursor: pointer;
+    }
+
+    #panel #face_content .selected {
+        color: #ff0000;
+    }
+
+        #panel #face_content .link:hover {
+            text-decoration: underline;
+        }
 
     #panel #content {
         padding: 0px 20px;
@@ -161,6 +179,16 @@ a {
         border-bottom: 1px solid #dedede;
     }
     #content{
+        position: absolute;
+        left: 0;
+        top: 60px;
+        right: 0;
+        bottom: 0;
+        font-size: 17px;
+        line-height: 22px;
+        overflow: auto;
+    }
+    #face_content{
         position: absolute;
         left: 0;
         top: 60px;
