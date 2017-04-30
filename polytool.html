@@ -40,6 +40,13 @@
                 transparent: true,
                 side: THREE.DoubleSide,
                 depthWrite: false
+            } ),
+          new THREE.MeshBasicMaterial( { 
+                color: 0x00cc00, 
+                opacity: 0.1,
+                transparent: true,
+                side: THREE.DoubleSide,
+                depthWrite: false
             } )
         ];
         //var forceFaceMats = new THREE.MultiMaterial(materials);
@@ -84,7 +91,13 @@ var faces;
           this.data = undefined;
           this.type = undefined;
         }
-        var pre_face3s_indices = [];
+
+// used to switch back to the previous color
+var cell_pre_face3s_indices = [];
+var cell_pre_face3s_material = [];
+var face_pre_face3s_indices = [];
+var face_pre_face3s_material = [];
+
         window.onmessage = function(e){
             if (e.data == 'hello') {
                 alert('It works!');
@@ -93,18 +106,20 @@ var faces;
             
             if (e.data.type == 'cell_idx') {
             // unhighlight the previous highlighted cells
-                for (var i = 0; i < pre_face3s_indices.length; i++) {
-                    face3s[pre_face3s_indices[i]].materialIndex = 0;
+                for (var i = 0; i < cell_pre_face3s_indices.length; i++) {
+                    face3s[cell_pre_face3s_indices[i]].materialIndex = cell_pre_face3s_material[i];
                 }
 
-                pre_face3s_indices = [];
+              cell_pre_face3s_indices = [];
+              cell_pre_face3s_material = [];
                 var cell_idx = e.data.data;
                 for (var i = 0; i < cells[cell_idx].hfs.length; i++) {
                     var face3_length = cells[cell_idx].hfs[i].face3_indices.length;
                     for (var j = 0; j < face3_length; j++) {
-                        var index = cells[cell_idx].hfs[i].face3_indices[j];
-                        face3s[index].materialIndex = 1;
-                        pre_face3s_indices.push(index);
+                      var index = cells[cell_idx].hfs[i].face3_indices[j];
+                      cell_pre_face3s_material.push(face3s[index].materialIndex);
+                      face3s[index].materialIndex = 1;
+                      cell_pre_face3s_indices.push(index);
                     }
                 }
 
@@ -119,10 +134,46 @@ var faces;
                 scene.add(mesh);
                 render();
             }
-            else if (e.data.type == 'model_name') {
-                modelPath = 'model/' + e.data.data;
-                window.onload();
+          else if (e.data.type == 'face_idx') {
+            for (var i = 0; i < face_pre_face3s_indices.length; i++) {
+              face3s[face_pre_face3s_indices[i]].materialIndex = face_pre_face3s_material[i];
             }
+
+            face_pre_face3s_indices = [];
+            face_pre_face3s_material = [];
+            var face_idx = e.data.data;
+            for (var i = 0; i < faces[face_idx].hfa.face3_indices.length; i++) {
+              var index = faces[face_idx].hfa.face3_indices[i];
+              face_pre_face3s_material.push(face3s[index].materialIndex);
+              face3s[index].materialIndex= 2;
+              face_pre_face3s_indices.push(index);
+            }
+/*            
+            for (var i = 0; i < cells[cell_idx].hfs.length; i++) {
+              var face3_length = cells[cell_idx].hfs[i].face3_indices.length;
+              for (var j = 0; j < face3_length; j++) {
+                var index = cells[cell_idx].hfs[i].face3_indices[j];
+                face3s[index].materialIndex = 1;
+                pre_face3s_indices.push(index);
+              }
+            }
+*/
+
+            // generate new THREE.Geometry object because
+            // http://stackoverflow.com/questions/12468906/three-js-updating-geometry-face-materialindex
+            geometry = new THREE.Geometry();
+            geometry.vertices = vertices;
+            geometry.faces = face3s;
+            scene.remove(mesh);
+            mesh = new THREE.Mesh(geometry, forceFaceMats);
+            //mesh.rotation.y = targetRotation;
+            scene.add(mesh);
+            render();
+          }
+          else if (e.data.type == 'model_name') {
+            modelPath = 'model/' + e.data.data;
+            window.onload();
+          }
         };
         
         var modelPath = 'model/basic.obj'
