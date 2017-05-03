@@ -254,7 +254,11 @@ window.onmessage = function(e){
 
       //     //console.log(object.geometry);
       // } );
+
+var objCenter = new THREE.Vector3();
+
 window.onload = function() {
+
             geometry = new THREE.Geometry();
             face3s = [];
             vertices = [];
@@ -277,13 +281,17 @@ window.onload = function() {
 
         //scene.add(cube);
         //camera.position.x = 20;
-  //       camera.position.y = 100;
-  //       camera.position.x = 10;
-  // camera.position.z = 0;
+        camera.position.y = 100;
+        camera.position.x = 10;
+  camera.position.z = 0;
 
   //console.log("asd" + objCenter);
-  read_obj_model(vertices, half_faces, edges, camera);
-
+  read_obj_model(vertices, half_faces, edges);
+  console.log(objCenter);
+  objCenter.divideScalar(objCenter.length);
+  camera.position.y = objCenter.y;
+  camera.position.x = objCenter.x;
+  camera.position.z = objCenter.z;
   //console.log('Center: ' + center.x);
   
 canvas = document.getElementById("debugCanvas");
@@ -296,6 +304,17 @@ var container2 = document.getElementById("rendererContainer");
 if (container2.firstChild)
     container2.removeChild(container2.firstChild);
 container2.appendChild(renderer.domElement);
+
+                controls = new THREE.TrackballControls( camera );
+                controls.rotateSpeed = 15.0;
+                controls.zoomSpeed = 1.2;
+                controls.panSpeed = 0.8;
+                controls.noZoom = false;
+                controls.noPan = false;
+                controls.staticMoving = true;
+                controls.dynamicDampingFactor = 0.3;
+                controls.keys = [ 65, 83, 68 ];
+                controls.addEventListener( 'change', render );
 
 // var container1 = document.getElementById("container1");
 // container1.appendChild(canvas);
@@ -316,9 +335,7 @@ container2.appendChild(renderer.domElement);
 
         function render() {
             //console.log("render");
-            //camera.lookAt(objCenter);
             renderer.render(scene, camera);
-            //console.log(camera.position);
             //console.log(mesh.rotation);
             var length = vertices.length;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -460,27 +477,14 @@ container2.appendChild(renderer.domElement);
         //     }
         //     return false;
         // }
-// console.log(math.sqrt(4));
-// var test = 1;
-// function addCenter(v) {
-//     console.log(v);
-//     console.log(objCenter);
-    
-// }
+console.log(math.sqrt(4));
+function read_obj_model(vertices, half_faces, edges) {
 
-function read_obj_model(vertices, half_faces, edges, camera) {
+ // var i = math.sqrt(4);
   math.config({number: 'number', precision: 64, epsilon: 0.1});
-
-  // used to place the camera
-  var objCenter = new THREE.Vector3(0, 0, 0);
-  var vCounter = 0;
-
-  // used to estimate a proper distance from the camera to the target(objCenter)
-  var x_min = 1000, x_max = -1000;
-  var y_min = 1000, y_max = -1000;
-  var z_min = 1000, z_max = -1000;
-
   $.get(modelPath, function(data) {
+      console.log(objCenter); 
+                //geometry.vertices = vertices;
                 var lines = data.split("\n");
                 var face3_index = 0;
                 var hf_index = 0;
@@ -493,16 +497,9 @@ function read_obj_model(vertices, half_faces, edges, camera) {
                         });
                         var v = new THREE.Vector3(t[0], t[1], t[2]);
                       vertices.push(v);
-                      //addCenter(v);
                       objCenter.add(v);
-                        vCounter++;
-                        if (v.x < x_min) x_min = v.x;
-                        if (v.x > x_max) x_max = v.x;
-                        if (v.y < y_min) y_min = v.y;
-                        if (v.y > y_max) y_max = v.y;
-                        if (v.z < z_min) z_min = v.z;
-                        if (v.z > z_max) z_max = v.z;
-                         //geometry.vertices.push(v);                 
+                      console.log(objCenter);
+                        //geometry.vertices.push(v);                 
                     }
                     else if (tokens[0] == 'f') {
                         //console.log("HI");
@@ -557,9 +554,7 @@ function read_obj_model(vertices, half_faces, edges, camera) {
                           face3s.push(face3_b);
                           hf.face3_indices.push(face3s.length - 1);
                           symhf.face3_indices.push(face3s.length - 1);
-                          console.log('self intersect');
                         }
-                        // not self-intersecting face
                         else {
                           for (var i = 1; i < length - 1; i++) {
                             var face3 = new THREE.Face3(hf.indices[0], hf.indices[i], hf.indices[i + 1], undefined, undefined, 0);
@@ -570,22 +565,9 @@ function read_obj_model(vertices, half_faces, edges, camera) {
                             hf.face3_indices.push(face3_index);
                             symhf.face3_indices.push(face3_index);
                             face3_index++;
-                            console.log('not self intersect');
                           }
                         }
                       }
-                      else {
-                          for (var i = 1; i < length - 1; i++) {
-                            var face3 = new THREE.Face3(hf.indices[0], hf.indices[i], hf.indices[i + 1], undefined, undefined, 0);
-                            face3s.push(face3);
-                            //geometry.faces.push(face3);
-
-                            // record mesh_index
-                            hf.face3_indices.push(face3_index);
-                            symhf.face3_indices.push(face3_index);
-                            face3_index++;
-                          }
-                        }
                         //console.log(edges);
                     }
                 });
@@ -594,26 +576,6 @@ function read_obj_model(vertices, half_faces, edges, camera) {
                 geometry.faces = face3s;
                 mesh = new THREE.Mesh(geometry, forceFaceMats);
                 scene.add(mesh);
-                console.log(vCounter);
-                console.log(vertices.length);
-                objCenter.divideScalar(vCounter);
-                console.log(objCenter);
-                //camera.lookAt(new THREE.Vector3(0, 0, 0));
-
-                camera.position.x = objCenter.x + (x_max - x_min);
-                camera.position.y = objCenter.y + (y_max - y_min);
-                camera.position.z = objCenter.z + (z_max - z_min);
-
-                controls = new THREE.TrackballControls( camera, undefined, objCenter);
-                controls.rotateSpeed = 15.0;
-                controls.zoomSpeed = 1.2;
-                controls.panSpeed = 0.8;
-                controls.noZoom = false;
-                controls.noPan = false;
-                controls.staticMoving = false;
-                controls.dynamicDampingFactor = 0.3;
-                controls.keys = [ 65, 83, 68 ];
-                controls.addEventListener( 'change', render );
 
                 render();
                 animate();

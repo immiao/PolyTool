@@ -5,7 +5,7 @@
  * @author Luca Antiga 	/ http://lantiga.github.io
  */
 
-THREE.TrackballControls = function ( object, domElement ) {
+THREE.TrackballControls = function ( object, domElement, t ) {
 
 	var _this = this;
 	var STATE = { NONE: - 1, ROTATE: 0, ZOOM: 1, PAN: 2, TOUCH_ROTATE: 3, TOUCH_ZOOM_PAN: 4 };
@@ -38,6 +38,8 @@ THREE.TrackballControls = function ( object, domElement ) {
 	// internals
 
 	this.target = new THREE.Vector3();
+	this.target = t; // changed by Miao
+	console.log(t);
 
 	var EPS = 0.000001;
 
@@ -195,7 +197,7 @@ THREE.TrackballControls = function ( object, domElement ) {
 			}
 
 			_movePrev.copy( _moveCurr );
-
+			//console.log(_this.target);
 		};
 
 	}() );
