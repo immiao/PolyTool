@@ -1,5 +1,4 @@
 # this .py file is used to eliminate the duplicated vertices in the original .obj file
-import numpy
 from sets import Set
 
 def strArr2floatArr (strArr):
@@ -40,7 +39,6 @@ def writeToFile(filename):
 		for vv in v[1]:
 			file.write(" ")
 			file.write(vv)
-		file.write("\n")
 
 	# write faces
 	for f in faces:
@@ -58,6 +56,6 @@ def writeToFile(filename):
 		file.write("\n")
 		
 if __name__ == "__main__":
-	inputDir = "../model/txt0"
+	inputDir = "../model/txt2"
 	readFile(inputDir)
-	writeToFile(inputDir + "/txt0_converted.obj")
+	writeToFile(inputDir + "/txt2_converted.obj")

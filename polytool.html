@@ -3,13 +3,15 @@
 <head>
     <title></title>
     <style>canvas { width: 100%; height: 100% }</style>
+
     <script src="js/three.min.js"></script>
     <script src="js/OBJLoader.js"></script>
     <script src="js/jquery-3.1.1.min.js"></script>
    
   <script src="js/TrackballControls.js"></script>
+
   <script src="js/math.min.js"></script>
-   <script src="js/require.js"></script>
+
     <link rel="stylesheet" href="css/polytool.css">
 </head>
 <body>
@@ -181,7 +183,8 @@ window.onmessage = function(e){
           }
         };
         
-        var modelPath = 'model/complex_cell_converted.obj'
+        //var modelPath = 'model/txt1/txt1_converted.obj'
+        var modelPath = 'model/txt2/txt2_converted.obj';
         var targetRotation = 0;
         var targetRotationOnMouseDown = 0;
         var mouseX = 0;
@@ -320,7 +323,7 @@ container2.appendChild(renderer.domElement);
             renderer.render(scene, camera);
             //console.log(camera.position);
             //console.log(mesh.rotation);
-            var length = vertices.length;
+            var length = vCounter; // vCounter but not vertices.length because we don't want to render intersection point for the self-intersecting faces
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             for (var i = 0; i < length; i++) {
                 var pos = new THREE.Vector3(vertices[i].x, vertices[i].y, vertices[i].z);
@@ -469,12 +472,11 @@ container2.appendChild(renderer.domElement);
 // }
 
 function read_obj_model(vertices, half_faces, edges, camera) {
+    vCounter = 0;
   math.config({number: 'number', precision: 64, epsilon: 0.1});
 
   // used to place the camera
   var objCenter = new THREE.Vector3(0, 0, 0);
-  var vCounter = 0;
-
   // used to estimate a proper distance from the camera to the target(objCenter)
   var x_min = 1000, x_max = -1000;
   var y_min = 1000, y_max = -1000;
@@ -482,7 +484,7 @@ function read_obj_model(vertices, half_faces, edges, camera) {
 
   $.get(modelPath, function(data) {
                 var lines = data.split("\n");
-                var face3_index = 0;
+                // var face3_index = 0;
                 var hf_index = 0;
                 $.each(lines, function(n, line) {
                     tokens = line.split(" ");
@@ -496,6 +498,8 @@ function read_obj_model(vertices, half_faces, edges, camera) {
                       //addCenter(v);
                       objCenter.add(v);
                         vCounter++;
+
+                        // used for centering the camera
                         if (v.x < x_min) x_min = v.x;
                         if (v.x > x_max) x_max = v.x;
                         if (v.y < y_min) y_min = v.y;
@@ -531,6 +535,8 @@ function read_obj_model(vertices, half_faces, edges, camera) {
                       var length = hf.indices.length;
                       if (length == 4) {
                         // TODO: deal with self-intersecting faces
+
+                        // calculate v to test intersection
                         var v = [];
                         var v_sub = [];
                         for (var i = 0; i < hf.indices.length; i++) {
@@ -541,6 +547,7 @@ function read_obj_model(vertices, half_faces, edges, camera) {
                           v_sub.push(vertices[index].z);
                           v.push(v_sub);
                         }
+
                         //console.log(v);
                         //console.log(math.intersect(v[1], v[2], v[0], v[3]));
                         var intersection = math.intersect(v[1], v[2], v[0], v[3]);
@@ -567,9 +574,9 @@ function read_obj_model(vertices, half_faces, edges, camera) {
                             //geometry.faces.push(face3);
 
                             // record mesh_index
-                            hf.face3_indices.push(face3_index);
-                            symhf.face3_indices.push(face3_index);
-                            face3_index++;
+                            hf.face3_indices.push(face3s.length - 1);
+                            symhf.face3_indices.push(face3s.length - 1);
+                            // face3_index++;
                             console.log('not self intersect');
                           }
                         }
@@ -581,9 +588,9 @@ function read_obj_model(vertices, half_faces, edges, camera) {
                             //geometry.faces.push(face3);
 
                             // record mesh_index
-                            hf.face3_indices.push(face3_index);
-                            symhf.face3_indices.push(face3_index);
-                            face3_index++;
+                            hf.face3_indices.push(face3s.length - 1);
+                            symhf.face3_indices.push(face3s.length - 1);
+                            // face3_index++;
                           }
                         }
                         //console.log(edges);
