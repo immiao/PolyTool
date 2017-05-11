@@ -103,8 +103,8 @@ var cell_pre_face3s_material = [];
 var face_pre_face3s_indices = [];
 var face_pre_face3s_material = [];
 
-// used to detect if it's uploading file
-var isUpload = false;
+// undefined if it's not uploading file
+var uploadData = undefined;
 
 window.onmessage = function(e){
 
@@ -184,9 +184,9 @@ window.onmessage = function(e){
             window.onload();
           }
           else if (e.data.type == 'upload') {
-            isUpload = true;
+            uploadData = e.data.data;
             window.onload();
-            isUpload = false;
+            uploadData = undefined;
           }
         };
         
@@ -292,10 +292,6 @@ window.onload = function() {
   // camera.position.z = 0;
 
   //console.log("asd" + objCenter);
-  if (isUpload)
-    read_upload_model(vertices, half_faces, edges, camera);
-  else
-    read_obj_model(vertices, half_faces, edges, camera);
 
 
   //console.log('Center: ' + center.x);
@@ -313,6 +309,7 @@ container2.appendChild(renderer.domElement);
 
 // var container1 = document.getElementById("container1");
 // container1.appendChild(canvas);
+    read_obj_model(vertices, half_faces, edges, camera, uploadData);
 
         };
 
@@ -329,7 +326,7 @@ container2.appendChild(renderer.domElement);
         }
 
         function render() {
-            //console.log("render");
+            console.log("render");
             //camera.lookAt(objCenter);
             renderer.render(scene, camera);
             //console.log(camera.position);
@@ -345,6 +342,7 @@ container2.appendChild(renderer.domElement);
                 pos.y = (-pos.y + 1) * 0.5 * canvas.height;
                 ctx.font = "10px Arial";
                 ctx.strokeText(i, pos.x, pos.y);
+                console.log(pos);
             }
             //parent.postMessage('hi', '*');
         }
@@ -653,8 +651,7 @@ function loadModel(data) {
     controls.addEventListener( 'change', render );
 
     //addFaceCenter();
-    render();
-    animate();
+
     //console.log(mesh);
     // var test = [];
     // test.push(half_faces[0]);
@@ -686,14 +683,15 @@ function loadModel(data) {
     console.log(edges);
     console.log(mesh);
 
-    }
-
-function read_upload_model(vertices, half_faces, edges, camera) {
-
+    render();
+    animate();
 }
 
-function read_obj_model(vertices, half_faces, edges, camera) {
-  $.get(modelPath, loadModel);
+function read_obj_model(vertices, half_faces, edges, camera, data) {
+    if (data == undefined)
+        $.get(modelPath, loadModel);
+    else
+        loadModel(data);
 }
 
         // function addFaceCenter() {

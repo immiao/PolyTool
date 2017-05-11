@@ -128,7 +128,23 @@
           //for (var i = 0; i < )
         };
 
+        function upload(e) {
+            var myIframe = document.getElementById('viewer');
+            var files = e.target.files;
+            var reader = new FileReader();
+            var f = files[0];
+            reader.readAsText(f, "UTF-8");
+            reader.onload = function (e){
+                var msg = new message();
+                msg.data = e.target.result;
+                msg.type = "upload";
+                
+                myIframe.contentWindow.postMessage(msg, '*');
+            };
+        }
+
         window.onload = function() {
+            document.getElementById('uploadInput').addEventListener('change', upload, false);
             var models = ["basic.obj", 
                 "basic1.obj",
                 "box_converted.obj",
