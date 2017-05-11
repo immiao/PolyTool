@@ -109,6 +109,9 @@ a {
         #panel #content1 .link:hover {
             text-decoration: underline;
         }
+    #panel #upload-content {
+        padding: 0px 20px;
+    }
 
 #viewer {
     position: absolute;

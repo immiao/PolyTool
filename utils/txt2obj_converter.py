@@ -56,6 +56,6 @@ def writeToFile(filename):
 		file.write("\n")
 		
 if __name__ == "__main__":
-	inputDir = "../model/txt2"
+	inputDir = "../model/txt3"
 	readFile(inputDir)
-	writeToFile(inputDir + "/txt2_converted.obj")
+	writeToFile(inputDir + "/txt3_converted.obj")

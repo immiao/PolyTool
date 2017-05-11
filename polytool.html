@@ -49,10 +49,9 @@
             } ),
           new THREE.MeshBasicMaterial( { 
                 color: 0x00cc00, 
-                opacity: 0.1,
-                transparent: true,
-                side: THREE.DoubleSide,
-                depthWrite: false
+
+                side: THREE.DoubleSide
+                
             } )
         ];
         //var forceFaceMats = new THREE.MultiMaterial(materials);
@@ -103,6 +102,9 @@ var cell_pre_face3s_indices = [];
 var cell_pre_face3s_material = [];
 var face_pre_face3s_indices = [];
 var face_pre_face3s_material = [];
+
+// used to detect if it's uploading file
+var isUpload = false;
 
 window.onmessage = function(e){
 
@@ -180,6 +182,11 @@ window.onmessage = function(e){
           else if (e.data.type == 'model_name') {
             modelPath = 'model/' + e.data.data;
             window.onload();
+          }
+          else if (e.data.type == 'upload') {
+            isUpload = true;
+            window.onload();
+            isUpload = false;
           }
         };
         
@@ -285,7 +292,11 @@ window.onload = function() {
   // camera.position.z = 0;
 
   //console.log("asd" + objCenter);
-  read_obj_model(vertices, half_faces, edges, camera);
+  if (isUpload)
+    read_upload_model(vertices, half_faces, edges, camera);
+  else
+    read_obj_model(vertices, half_faces, edges, camera);
+
 
   //console.log('Center: ' + center.x);
   
@@ -333,7 +344,7 @@ container2.appendChild(renderer.domElement);
                 pos.x = (pos.x + 1) * 0.5 * canvas.width;
                 pos.y = (-pos.y + 1) * 0.5 * canvas.height;
                 ctx.font = "10px Arial";
-                ctx.strokeText(i + 1, pos.x, pos.y);
+                ctx.strokeText(i, pos.x, pos.y);
             }
             //parent.postMessage('hi', '*');
         }
@@ -390,6 +401,7 @@ container2.appendChild(renderer.domElement);
             //console.log(edges);
         }
 
+        // indices is faces[k].hfa.indices or faces[k].hfb.indices, which is the indices of the vertices of a face
         function get_center(indices) {
             var center = new THREE.Vector3();
             var length = indices.length;
@@ -401,9 +413,12 @@ container2.appendChild(renderer.domElement);
             return center;
         }
 
+        // find the center of the face and find the vector perpendicular to the edge (v_b - v_a)
+        // face_indices contain the indices of the vertices, which represent a face
         function get_perpendicular_vector(v_a, v_b, face_indices) {
             //console.log(v_a);
             var center = get_center(face_indices);
+
             //console.log(v_a, v_b, center);
             var e_vector = new THREE.Vector3();
             e_vector.subVectors(v_b, v_a);
@@ -471,8 +486,8 @@ container2.appendChild(renderer.domElement);
     
 // }
 
-function read_obj_model(vertices, half_faces, edges, camera) {
-    vCounter = 0;
+function loadModel(data) {
+  vCounter = 0;
   math.config({number: 'number', precision: 64, epsilon: 0.1});
 
   // used to place the camera
@@ -482,180 +497,216 @@ function read_obj_model(vertices, half_faces, edges, camera) {
   var y_min = 1000, y_max = -1000;
   var z_min = 1000, z_max = -1000;
 
-  $.get(modelPath, function(data) {
-                var lines = data.split("\n");
-                // var face3_index = 0;
-                var hf_index = 0;
-                $.each(lines, function(n, line) {
-                    tokens = line.split(" ");
-                    //console.log(tokens[0]);
-                    if (tokens[0] == 'v') {
-                        var t = tokens.slice(1, 4).map(function(item) {
-                            return parseFloat(item);
-                        });
-                        var v = new THREE.Vector3(t[0], t[1], t[2]);
-                      vertices.push(v);
-                      //addCenter(v);
-                      objCenter.add(v);
-                        vCounter++;
-
-                        // used for centering the camera
-                        if (v.x < x_min) x_min = v.x;
-                        if (v.x > x_max) x_max = v.x;
-                        if (v.y < y_min) y_min = v.y;
-                        if (v.y > y_max) y_max = v.y;
-                        if (v.z < z_min) z_min = v.z;
-                        if (v.z > z_max) z_max = v.z;
-                         //geometry.vertices.push(v);                 
-                    }
-                    else if (tokens[0] == 'f') {
-                        //console.log("HI");
-                        // construct 2 half-faces and put them into one face
-                        var hf = new half_face();
-                        for (var i = 1; i < tokens.length; i++) {
-                            var indices = tokens[i].split("/");
-                            // minus 1 makes it start from 0
-                            hf.indices.push(parseInt(indices[0]) - 1);
-                            //console.log(face);
-                        }
-                        half_faces.push(hf);
-                        var symhf = new half_face();
-                        symhf.indices = hf.indices.slice(0).reverse();
-                        half_faces.push(symhf);
-                        var f = new face();
-                        f.hfa = hf;
-                      f.hfb = symhf;
-                      faces.push(f);
-                        addFaceToEdge(f, edges);
-                        hf.id = hf_index;
-                        symhf.id = hf_index + 1;
-                        hf_index += 2;
-
-                        // construct mesh for rendering
-                      var length = hf.indices.length;
-                      if (length == 4) {
-                        // TODO: deal with self-intersecting faces
-
-                        // calculate v to test intersection
-                        var v = [];
-                        var v_sub = [];
-                        for (var i = 0; i < hf.indices.length; i++) {
-                          v_sub = [];
-                          var index = hf.indices[i];
-                          v_sub.push(vertices[index].x);
-                          v_sub.push(vertices[index].y);
-                          v_sub.push(vertices[index].z);
-                          v.push(v_sub);
-                        }
-
-                        //console.log(v);
-                        //console.log(math.intersect(v[1], v[2], v[0], v[3]));
-                        var intersection = math.intersect(v[1], v[2], v[0], v[3]);
-                        if (intersection != null) {
-                          var newVertex = new THREE.Vector3(intersection[0], intersection[1], intersection[2]);
-                          vertices.push(newVertex);
-                          var newVertexIndex = vertices.length - 1;
-                          var face3_a = new THREE.Face3(hf.indices[0], hf.indices[1], newVertexIndex);
-                          var face3_b = new THREE.Face3(hf.indices[2], hf.indices[3], newVertexIndex);
-                          face3s.push(face3_a);
-                          hf.face3_indices.push(face3s.length - 1);
-                          symhf.face3_indices.push(face3s.length - 1);
-                        
-                          face3s.push(face3_b);
-                          hf.face3_indices.push(face3s.length - 1);
-                          symhf.face3_indices.push(face3s.length - 1);
-                          console.log('self intersect');
-                        }
-                        // not self-intersecting face
-                        else {
-                          for (var i = 1; i < length - 1; i++) {
-                            var face3 = new THREE.Face3(hf.indices[0], hf.indices[i], hf.indices[i + 1], undefined, undefined, 0);
-                            face3s.push(face3);
-                            //geometry.faces.push(face3);
-
-                            // record mesh_index
-                            hf.face3_indices.push(face3s.length - 1);
-                            symhf.face3_indices.push(face3s.length - 1);
-                            // face3_index++;
-                            console.log('not self intersect');
-                          }
-                        }
-                      }
-                      else {
-                          for (var i = 1; i < length - 1; i++) {
-                            var face3 = new THREE.Face3(hf.indices[0], hf.indices[i], hf.indices[i + 1], undefined, undefined, 0);
-                            face3s.push(face3);
-                            //geometry.faces.push(face3);
-
-                            // record mesh_index
-                            hf.face3_indices.push(face3s.length - 1);
-                            symhf.face3_indices.push(face3s.length - 1);
-                            // face3_index++;
-                          }
-                        }
-                        //console.log(edges);
-                    }
-                });
-
-                geometry.vertices = vertices;
-                geometry.faces = face3s;
-                mesh = new THREE.Mesh(geometry, forceFaceMats);
-                scene.add(mesh);
-                console.log(vCounter);
-                console.log(vertices.length);
-                objCenter.divideScalar(vCounter);
-                console.log(objCenter);
-                //camera.lookAt(new THREE.Vector3(0, 0, 0));
-
-                camera.position.x = objCenter.x + (x_max - x_min);
-                camera.position.y = objCenter.y + (y_max - y_min);
-                camera.position.z = objCenter.z + (z_max - z_min);
-
-                controls = new THREE.TrackballControls( camera, undefined, objCenter);
-                controls.rotateSpeed = 15.0;
-                controls.zoomSpeed = 1.2;
-                controls.panSpeed = 0.8;
-                controls.noZoom = false;
-                controls.noPan = false;
-                controls.staticMoving = false;
-                controls.dynamicDampingFactor = 0.3;
-                controls.keys = [ 65, 83, 68 ];
-                controls.addEventListener( 'change', render );
-
-                render();
-                animate();
-                //console.log(mesh);
-                // var test = [];
-                // test.push(half_faces[0]);
-                // console.log(test);
-                // half_faces[0].indices[0] = 100;
-                // console.log(test);
-                // half_faces[0] = half_faces[1];
-                // console.log(half_faces[0]);
-                // console.log(test);
-                connect_half_faces(vertices, edges);
-                find_cells(cells, half_faces);
-              var msg = new message();
-              msg.data = cells.length;
-              msg.type = 'cellsLength';
-              parent.postMessage(msg, '*');
-
-              msg = new message();
-              msg.data = faces.length;
-              msg.type = 'facesLength';
-
-              parent.postMessage(msg, '*');
-                //console.log(vertices);
-                //var test = getCenter(half_faces[0].indices);
-                //console.log(test);
-                //console.log(vertices[0][0]);
-                //console.log(faces);
-                console.log(cells);
-                console.log(half_faces);
-                console.log(edges);
-                console.log(mesh);
+    var lines = data.split("\n");
+    // var face3_index = 0;
+    var hf_index = 0;
+    $.each(lines, function(n, line) {
+        tokens = line.split(" ");
+        //console.log(tokens[0]);
+        if (tokens[0] == 'v') {
+            var t = tokens.slice(1, 4).map(function(item) {
+                return parseFloat(item);
             });
+            var v = new THREE.Vector3(t[0], t[1], t[2]);
+          vertices.push(v);
+          //addCenter(v);
+          objCenter.add(v);
+            vCounter++;
+
+            // used for centering the camera
+            if (v.x < x_min) x_min = v.x;
+            if (v.x > x_max) x_max = v.x;
+            if (v.y < y_min) y_min = v.y;
+            if (v.y > y_max) y_max = v.y;
+            if (v.z < z_min) z_min = v.z;
+            if (v.z > z_max) z_max = v.z;
+             //geometry.vertices.push(v);                 
         }
+        else if (tokens[0] == 'f') {
+            //console.log("HI");
+            // construct 2 half-faces and put them into one face
+            var hf = new half_face();
+            for (var i = 1; i < tokens.length; i++) {
+                var indices = tokens[i].split("/");
+                // minus 1 makes it start from 0
+                hf.indices.push(parseInt(indices[0]) - 1);
+                //console.log(face);
+            }
+            half_faces.push(hf);
+            var symhf = new half_face();
+            symhf.indices = hf.indices.slice(0).reverse();
+            half_faces.push(symhf);
+            var f = new face();
+            f.hfa = hf;
+          f.hfb = symhf;
+          faces.push(f);
+            addFaceToEdge(f, edges);
+            hf.id = hf_index;
+            symhf.id = hf_index + 1;
+            hf_index += 2;
+
+            // construct mesh for rendering
+          var length = hf.indices.length;
+          if (length == 4) {
+            // TODO: deal with self-intersecting faces
+
+            // calculate v to test intersection
+            var v = [];
+            var v_sub = [];
+            for (var i = 0; i < hf.indices.length; i++) {
+              v_sub = [];
+              var index = hf.indices[i];
+              v_sub.push(vertices[index].x);
+              v_sub.push(vertices[index].y);
+              v_sub.push(vertices[index].z);
+              v.push(v_sub);
+            }
+
+            //console.log(v);
+            //console.log(math.intersect(v[1], v[2], v[0], v[3]));
+            var intersection1 = math.intersect(v[1], v[2], v[0], v[3]);
+            var intersection2 = math.intersect(v[0], v[1], v[2], v[3]);
+            if (intersection1 != null) {
+              var newVertex = new THREE.Vector3(intersection1[0], intersection1[1], intersection1[2]);
+              vertices.push(newVertex);
+              var newVertexIndex = vertices.length - 1;
+              var face3_a = new THREE.Face3(hf.indices[0], hf.indices[1], newVertexIndex);
+              var face3_b = new THREE.Face3(hf.indices[2], hf.indices[3], newVertexIndex);
+              face3s.push(face3_a);
+              hf.face3_indices.push(face3s.length - 1);
+              symhf.face3_indices.push(face3s.length - 1);
+            
+              face3s.push(face3_b);
+              hf.face3_indices.push(face3s.length - 1);
+              symhf.face3_indices.push(face3s.length - 1);
+              console.log('self intersect1');
+            }
+            else if (intersection2 != null) {
+              var newVertex = new THREE.Vector3(intersection2[0], intersection2[1], intersection2[2]);
+              vertices.push(newVertex);
+              var newVertexIndex = vertices.length - 1;
+              var face3_a = new THREE.Face3(hf.indices[0], hf.indices[3], newVertexIndex);
+              var face3_b = new THREE.Face3(hf.indices[1], hf.indices[2], newVertexIndex);
+              face3s.push(face3_a);
+              hf.face3_indices.push(face3s.length - 1);
+              symhf.face3_indices.push(face3s.length - 1);
+            
+              face3s.push(face3_b);
+              hf.face3_indices.push(face3s.length - 1);
+              symhf.face3_indices.push(face3s.length - 1);
+              console.log('self intersect2');
+            }
+            // not self-intersecting face
+            else {
+              for (var i = 1; i < length - 1; i++) {
+                var face3 = new THREE.Face3(hf.indices[0], hf.indices[i], hf.indices[i + 1], undefined, undefined, 0);
+                face3s.push(face3);
+                //geometry.faces.push(face3);
+
+                // record mesh_index
+                hf.face3_indices.push(face3s.length - 1);
+                symhf.face3_indices.push(face3s.length - 1);
+                // face3_index++;
+                console.log('not self intersect');
+              }
+            }
+          }
+          else {
+              for (var i = 1; i < length - 1; i++) {
+                var face3 = new THREE.Face3(hf.indices[0], hf.indices[i], hf.indices[i + 1], undefined, undefined, 0);
+                face3s.push(face3);
+                //geometry.faces.push(face3);
+
+                // record mesh_index
+                hf.face3_indices.push(face3s.length - 1);
+                symhf.face3_indices.push(face3s.length - 1);
+                // face3_index++;
+              }
+            }
+            //console.log(edges);
+        }
+    });
+
+    geometry.vertices = vertices;
+    geometry.faces = face3s;
+    mesh = new THREE.Mesh(geometry, forceFaceMats);
+    scene.add(mesh);
+    console.log(vCounter);
+    console.log(vertices.length);
+    objCenter.divideScalar(vCounter);
+    console.log(objCenter);
+    //camera.lookAt(new THREE.Vector3(0, 0, 0));
+
+    camera.position.x = objCenter.x + (x_max - x_min);
+    camera.position.y = objCenter.y + (y_max - y_min);
+    camera.position.z = objCenter.z + (z_max - z_min);
+
+    controls = new THREE.TrackballControls( camera, undefined, objCenter);
+    controls.rotateSpeed = 15.0;
+    controls.zoomSpeed = 1.2;
+    controls.panSpeed = 0.8;
+    controls.noZoom = false;
+    controls.noPan = false;
+    controls.staticMoving = false;
+    controls.dynamicDampingFactor = 0.3;
+    controls.keys = [ 65, 83, 68 ];
+    controls.addEventListener( 'change', render );
+
+    //addFaceCenter();
+    render();
+    animate();
+    //console.log(mesh);
+    // var test = [];
+    // test.push(half_faces[0]);
+    // console.log(test);
+    // half_faces[0].indices[0] = 100;
+    // console.log(test);
+    // half_faces[0] = half_faces[1];
+    // console.log(half_faces[0]);
+    // console.log(test);
+    connect_half_faces(vertices, edges);
+    find_cells(cells, half_faces);
+    var msg = new message();
+    msg.data = cells.length;
+    msg.type = 'cellsLength';
+    parent.postMessage(msg, '*');
+
+    msg = new message();
+    msg.data = faces.length;
+    msg.type = 'facesLength';
+
+    parent.postMessage(msg, '*');
+    //console.log(vertices);
+    //var test = getCenter(half_faces[0].indices);
+    //console.log(test);
+    //console.log(vertices[0][0]);
+    //console.log(faces);
+    console.log(cells);
+    console.log(half_faces);
+    console.log(edges);
+    console.log(mesh);
+
+    }
+
+function read_upload_model(vertices, half_faces, edges, camera) {
+
+}
+
+function read_obj_model(vertices, half_faces, edges, camera) {
+  $.get(modelPath, loadModel);
+}
+
+        // function addFaceCenter() {
+        //     for (var i = 0; i < faces.length; i++) {
+
+        //         var geometry = new THREE.SphereGeometry( 0.1, 32, 32 );
+        //         var material = new THREE.MeshBasicMaterial( {color: 0xffff00} );
+        //         var sphere = new THREE.Mesh( geometry, material );
+        //         sphere.positon = get_center(faces[i].hfa.indices);
+        //         scene.add(sphere);
+        //         console.log(sphere.position);
+        //     }
+        // }
 
         function connect_around(vertices, edge) {
             // Use simple selection sort
